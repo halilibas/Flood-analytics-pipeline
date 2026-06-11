@@ -22,3 +22,9 @@ The project needs a stable Python version for PySpark. `pyenv` makes the Python 
 
 **Context:**  
 During setup, a Homebrew Python 3.11 environment hit a local `pyexpat` symbol mismatch related to outdated Command Line Tools. Using `pyenv` avoided that issue and made the environment easier to control.
+
+## 2026-06-11 - Data Modeling Descions
+ - Drafted v1 star schema for fact_claims (PNG + prose)
+  - Locked grain: accumulating snapshot, one row per claim
+  - Locked SCD types: SCD2 on policy/customer, SCD1 on agent/property/geography/cat_event
+  - Documented role-playing date dimension and degenerate dimension patterns
