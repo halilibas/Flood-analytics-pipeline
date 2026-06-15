@@ -107,3 +107,42 @@ All tables — bronze, silver, gold — are Delta tables. Storage details:
 **SCD2 implementation:** SCD2 dimensions (`dim_policy`, `dim_customer`) use the standard `effective_date` / `expiration_date` / `is_current` pattern, maintained via Delta `MERGE INTO` operations in the silver-to-gold transformation. The surrogate key (`policy_key`, `customer_key`) is unique per version; the natural key (`policy_number`, `customer_id`) is shared across versions of the same entity.
 
 **Time travel use cases:** Delta time travel will be used for (1) debugging — querying historical state of gold tables when investigating analytical anomalies, (2) reproducibility — re-running KPI calculations against prior versions of the data, (3) audit — answering "what did the data look like at month-end."
+
+
+## v1 → v2 deltas (post-FEMA exploration)
+
+### Additions to fact_claims (measures)
+- `icc_claim_amount` and `icc_coverage_limit` (ICC = Increased Cost of Compliance, FEMA-specific coverage)
+- `building_damage_amount` and `contents_damage_amount` (distinct from paid amounts; enables damage-to-payment ratio analysis)
+- `water_depth` (event characteristic at this property)
+- Net vs gross payment amounts both available; will store gross + add net as derived
+
+### Lifecycle date gap
+- FEMA does not provide claim filed, first payment, or closed dates
+- Decision: synthesize these from dateOfLoss + plausible offsets to enable cycle-time analytics
+- Documented as a known limitation; in a real insurance shop these would come from the claims system
+
+### dim_property expansion
+- v1 had 7 attributes; FEMA gives us 20+. Selecting 10-12 high-signal attributes (flood_zone, elevation_difference, occupancy_type, primary_residence_indicator, etc.)
+- Adding `flood_zone_current` separately from `flood_zone` to handle FEMA's flood zone remapping over time
+
+### dim_geography enrichment
+- Adding: lat/lng, census tract, census block group, NFIP community name and number, CRS classification
+- Geographic granularity now property-level coordinates, not just ZIP-level
+
+### dim_cat_event simplification
+- FEMA already tags claims with `floodEvent` — derive dim_cat_event from distinct values rather than manually curating + matching by date+state
+- Add NOAA event metadata (storm category, dates, total losses) as enrichment in week 6
+
+### New: junk dimension dim_flood_circumstances
+- Combines causeOfDamage, floodCharacteristicsIndicator, floodWaterDuration
+- Standard Kimball junk-dimension pattern for low-cardinality flag combinations
+- Add in v2
+
+### Denial / non-payment analytics
+- nonPaymentReasonBuilding / nonPaymentReasonContents enable claim-denial analysis
+- Add as fact-level degenerate dimensions or small junk dim
+
+### Degenerate dimensions
+- FEMA `id` is the natural row key → `fema_claim_id` in fact_claims
+- `ficoNumber` available as a secondary identifier
