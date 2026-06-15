@@ -95,3 +95,15 @@ Pre-populated calendar dimension. `date_key` is an integer in YYYYMMDD format (e
 - Surrogate key generation strategy (identity column vs SHA hash vs UUID)
 - Whether to physicalize `total_claim_amount` or compute on read
 - Audit column standards (`_ingested_at`, `_source_file`, `_pipeline_run_id`)
+
+## Physical implementation
+
+All tables — bronze, silver, gold — are Delta tables. Storage details:
+
+- **Bronze tables** live in `bronze.*` schema, partitioned by ingest date (`_ingested_at` date portion)
+- **Silver tables** live in `silver.*`, partitioned by a natural date attribute (e.g., `silver.claims_clean` partitioned by `loss_year`)
+- **Gold tables** live in `gold.*`. Facts partitioned by date dimension (`date_of_loss_key` year portion). Dimensions unpartitioned (small).
+
+**SCD2 implementation:** SCD2 dimensions (`dim_policy`, `dim_customer`) use the standard `effective_date` / `expiration_date` / `is_current` pattern, maintained via Delta `MERGE INTO` operations in the silver-to-gold transformation. The surrogate key (`policy_key`, `customer_key`) is unique per version; the natural key (`policy_number`, `customer_id`) is shared across versions of the same entity.
+
+**Time travel use cases:** Delta time travel will be used for (1) debugging — querying historical state of gold tables when investigating analytical anomalies, (2) reproducibility — re-running KPI calculations against prior versions of the data, (3) audit — answering "what did the data look like at month-end."
