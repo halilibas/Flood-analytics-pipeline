@@ -1,6 +1,6 @@
 # claims-policy-analytics-pipeline
 
-> Work in progress - May August 2026 - Present
+> Work in progress - May 2026 - Present
 
 An end-to-end data engineering project using FEMA NFIP flood claims data and synthetic policy, customer, and agent data.
 
@@ -19,7 +19,7 @@ Current / planned stack:
 - **Compute / storage:** Databricks, Delta Lake
 - **Transformation:** PySpark, dbt
 - **Orchestration:** Apache Airflow
-- **Quality:** dbt tests, Great Expectations
+- **Quality:** dbt tests
 - **Visualization:** Streamlit
 
 ## Why this domain
