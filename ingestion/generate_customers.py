@@ -12,7 +12,7 @@ from faker import Faker
 
 SEED = 42
 FEMA_CSV = Path("/Users/halil/Desktop/data/raw/FimaNfipClaimsV2.csv").expanduser()
-OUTPUT_PATH = Path("/Users/halil/Desktop/data/synthetic/agents.parquet").expanduser()
+OUTPUT_PATH = Path("/Users/halil/Desktop/data/synthetic/customers.parquet").expanduser()
 PIPELINE_RUN_ID = str(uuid4())
 INGESTED_AT = datetime.now(timezone.utc)
 
