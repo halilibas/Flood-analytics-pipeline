@@ -37,7 +37,7 @@ def generate_agent():
         "email": fake.company_email(),
         "phone": fake.phone_number(),
         "hire_date": fake.date_between(start_date="-25y", end_date="-1y"),
-        "commision_rate": round(random.uniform(0.05, 0.15), 4)
+        "commission_rate": round(random.uniform(0.05, 0.15), 4)
     }
 
 def main():
