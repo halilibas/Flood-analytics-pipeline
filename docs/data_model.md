@@ -146,3 +146,16 @@ All tables — bronze, silver, gold — are Delta tables. Storage details:
 ### Degenerate dimensions
 - FEMA `id` is the natural row key → `fema_claim_id` in fact_claims
 - `ficoNumber` available as a secondary identifier
+
+### Reference tables (new layer)
+- ingestion/reference_data/occupancy_type_lookup.csv
+- ingestion/reference_data/cause_of_damage_lookup.csv
+- ingestion/reference_data/location_of_contents_lookup.csv
+- ingestion/reference_data/condominium_coverage_lookup.csv
+- Loaded to bronze.ref_* tables and joined in silver to enrich code columns
+
+### dim_geography: drop city, keep lat/long + ZIP + county + census tract
+FEMA redacts city to "Currently Unavailable". Granularity available at lat/long is sufficient.
+
+### Bool encoding standardized in silver
+All FEMA *Indicator fields cast from 0/1 integer to BOOLEAN at silver layer.
