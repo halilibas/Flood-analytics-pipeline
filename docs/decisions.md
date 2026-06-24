@@ -87,3 +87,22 @@ During setup, a Homebrew Python 3.11 environment hit a local `pyexpat` symbol mi
 Pre/post row counts asserted to catch silent data loss. Result: 2,721,780 rows = source claim count, confirming 100% FK integrity from validator.
 
 Columns selectively projected before joining to (a) prevent name collisions, (b) reduce shuffle data volume. Customer / agent / policy columns prefixed/aliased for analytical clarity downstream (e.g., `policy_effective_date` not just `effective_date`).
+
+
+## 2026-06-24 — Gold layer landed; KPIs validate against industry numbers
+
+`gold.fact_claims` v0 + `gold.dim_date` built. First star schema query against published NFIP industry payouts matched within single-digit percentage:
+
+| Event | Project total | Published NFIP total | Δ |
+|---|---|---|---|
+| Hurricane Katrina | $16.26B | ~$16.3B | <1% |
+| Hurricane Sandy | $8.96B | ~$8.5B | ~5% |
+| Hurricane Harvey | $9.06B | ~$9B | ~1% |
+
+This validation matters: the pipeline doesn't just run; it produces correct numbers. Sanity-check queries against external published figures should remain a permanent fixture of the gold layer.
+
+### Hurricane-season analytical query (one-line via dim_date.hurricane_season_flag)
+- In-season: 1.91M claims, avg severity $40,769, $77.78B total
+- Off-season: 814k claims, avg severity $14,641, $11.92B total
+- Hurricane-season claims are 2.8x more severe — directionally correct for the domain
+- This query exists because `hurricane_season_flag` is a domain attribute on dim_date. Without it, the same insight would require month-comparison logic in every query.
