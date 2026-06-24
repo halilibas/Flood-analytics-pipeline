@@ -59,3 +59,31 @@ During setup, a Homebrew Python 3.11 environment hit a local `pyexpat` symbol mi
 - **Gold:** star schema, SCD2 where required, computed measures, denormalized where it helps query patterns. What stakeholders and dashboards see.
 
 **Rebuild guarantee:** Every layer is reproducible from the layer below it. Bronze is the only layer that depends on external systems.
+
+
+## 2026-06-20 — Synthetic data: 1:1 with FEMA claims for v1
+
+**Context:** FEMA NFIP redacts customer, agent, policy details. We synthesize them.
+
+**Decision (v1 simplification):** Generate one synthetic customer and one synthetic policy per FEMA claim, joined via the FEMA `id` UUID.
+
+**Trade-off:** This simplification produces a 1:1:1 model that is easier to reason about for v1 but doesn't model multi-claim policyholders or repeat-loss properties.
+
+**v2 plan:** Group claims by (state, county, dateOfLoss-window, coverage similarity) to consolidate to one policy with multiple claims where plausible.
+
+## 2026-06-23 — Silver passes for clean-by-construction synthetic data
+
+**Decision:** Synthetic data still flows through silver (`silver.{agents,customers,policies}_clean`) even though generators enforce cleanliness upstream.
+
+**Why:** Silver is the typed contract layer for all downstream consumers (gold, dashboards). Routing synthetic data through silver gives uniform interface: any silver consumer can assume types are correct, audit columns are present, and table location is predictable. The transformation pass is cheap (type tighten + audit columns) but the architectural consistency is valuable.
+
+## 2026-06-23 — Selective projection + broadcast join in enrichment
+
+`silver.claims_enriched` join strategy:
+1. Inner join claims to policies on `id = fema_claim_id` (1:1 by validator)
+2. Inner join to customers on `customer_id`
+3. Inner join to agents with `F.broadcast()` hint — agents table is 75 rows
+
+Pre/post row counts asserted to catch silent data loss. Result: 2,721,780 rows = source claim count, confirming 100% FK integrity from validator.
+
+Columns selectively projected before joining to (a) prevent name collisions, (b) reduce shuffle data volume. Customer / agent / policy columns prefixed/aliased for analytical clarity downstream (e.g., `policy_effective_date` not just `effective_date`).
