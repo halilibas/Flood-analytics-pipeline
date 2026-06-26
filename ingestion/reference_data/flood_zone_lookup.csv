@@ -1,0 +1,13 @@
+flood_zone_code,flood_zone_label,risk_tier,is_sfha
+A,Special Flood with no BFE,High,true
+AE,Special Flood with BFE,High,true
+A99,Special Flood with Protection Zone,High,true
+AH,Special Flood with Shallow Ponding,High,true
+AO,Special Flood with Sheet Flow,High,true
+AR,Decertified Flood Protection System,High,true
+V,Velocity Flood with no BFE,Very High (Coastal),true
+VE,Velocity Flood with BFE,Very High (Coastal),true
+B,Moderate Flood Risk,Moderate,false
+C,Minimal Flood Risk,Low,false
+X,Outside SFHA,Low,false
+D,Possible Flood (Undetermined),Unknown,false

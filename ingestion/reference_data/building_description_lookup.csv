@@ -1,0 +1,21 @@
+building_description_code,building_description_label,structure_category
+01,Main House,Primary Structure
+02,Detached Guest House,Outbuilding
+03,Detached Garage,Outbuilding
+04,Agricultural Building,Agricultural
+05,Warehouse,Commercial
+06,"Pool House, Clubhouse, Recreation Building",Outbuilding
+07,Tool/Storage Shed,Outbuilding
+08,Other,Other
+09,Barn,Agricultural
+10,Apartment Building,Multi-Family
+11,Apartment Unit,Multi-Family
+12,Cooperative Building,Multi-Family
+13,Cooperative Unit,Multi-Family
+14,Commercial Building,Commercial
+15,Condominium (Entire Building),Condominium
+16,Condominium Unit,Condominium
+17,House of Worship,Institutional
+18,Manufactured (Mobile) Home,Mobile Home
+19,Travel Trailer,Mobile Home
+20,Townhouse/Rowhouse,Multi-Family

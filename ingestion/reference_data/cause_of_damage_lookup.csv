@@ -1,0 +1,13 @@
+cause_of_damage_code,cause_of_damage_label,cause_category
+0,Other Causes,Other
+1,Tidal Water Overflow,Coastal
+2,"Stream, River, or Lake Overflow",Inland Flooding
+3,Alluvial Fan Overflow,Inland Flooding
+4,Accumulation of Rainfall or Snowmelt,Rainfall
+7,Erosion - Demolition,Erosion
+8,Erosion - Removal,Erosion
+9,"Earth Movement: Landslide, Subsidence, Sinkhole",Earth Movement
+A,Closed Basin Lake,Inland Flooding
+B,Expedited Claim - No Site Inspection,Expedited
+C,Expedited Claim - Follow-up Site Inspection,Expedited
+D,Expedited Claim - Remote Adjustment Pilot,Expedited

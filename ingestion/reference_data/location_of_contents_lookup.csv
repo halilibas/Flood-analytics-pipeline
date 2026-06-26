@@ -1,0 +1,8 @@
+location_of_contents_code,location_of_contents_label,is_basement_exposure
+1,Basement/Enclosure/Crawlspace/Subgrade Crawlspace Only,true
+2,Basement/Enclosure/Crawlspace and Above,true
+3,Lowest Floor Only Above Ground Level,false
+4,Lowest Floor Above Ground Level and Higher Floors,false
+5,Above Ground Level More Than One Full Floor,false
+6,Manufactured (Mobile) Home or Travel Trailer on Foundation,false
+7,Enclosure/Crawlspace and Above,true

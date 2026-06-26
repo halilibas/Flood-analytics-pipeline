@@ -1,0 +1,15 @@
+occupancy_type_code,occupancy_type_label,occupancy_category,rating_engine
+1,Single Family Residence,Residential,Legacy
+2,2 to 4 Unit Residential Building,Residential,Legacy
+3,Residential Building with 5+ Units,Residential,Legacy
+4,Non-Residential Building,Commercial,Legacy
+6,Non-Residential Business,Commercial,Legacy
+11,Single-Family Residential Building,Residential,Risk Rating 2.0
+12,Residential Non-Condo Building 2-4 Units,Residential,Risk Rating 2.0
+13,Residential Non-Condo Building 5+ Units,Residential,Risk Rating 2.0
+14,Residential Mobile/Manufactured Home,Residential,Risk Rating 2.0
+15,Residential Condo Association,Residential,Risk Rating 2.0
+16,Single Residential Unit in Multi-Unit Building,Residential,Risk Rating 2.0
+17,Non-Residential Mobile/Manufactured Home,Commercial,Risk Rating 2.0
+18,Non-Residential Building,Commercial,Risk Rating 2.0
+19,Non-Residential Unit in Multi-Unit Building,Commercial,Risk Rating 2.0
