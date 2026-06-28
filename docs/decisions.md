@@ -106,3 +106,21 @@ This validation matters: the pipeline doesn't just run; it produces correct numb
 - Off-season: 814k claims, avg severity $14,641, $11.92B total
 - Hurricane-season claims are 2.8x more severe — directionally correct for the domain
 - This query exists because `hurricane_season_flag` is a domain attribute on dim_date. Without it, the same insight would require month-comparison logic in every query.
+
+
+## 2026-06-28 — Synthesized claim lifecycle dates (silver layer)
+
+FEMA does not provide `date_filed`, `date_first_payment`, or `date_closed`. Synthesized in `silver.claims_clean` using deterministic per-claim seeded offsets from `dateOfLoss`:
+
+- `date_filed = dateOfLoss + uniform(1, 30) days`
+- `date_first_payment = date_filed + uniform(7, 90) days` (NULL when no payment recorded — affects 566,351 of 2.72M claims = 21%)
+- `date_closed = date_filed + uniform(30, 365) days` (constrained ≥ date_first_payment when both exist)
+
+**Determinism via MD5(id || salt) hash → modulo offset.** Each claim's three offsets are derived from salted MD5 hashes of the FEMA `id` UUID. Same UUID → same dates. Critical for reproducibility: non-deterministic lifecycle dates would break point-in-time joins in fact_claims v1 and would produce different cycle-time measures across pipeline runs.
+
+**Validated distributions:**
+- days_loss_to_filed: min 1, median 16, max 30 (uniform across configured range)
+- days_filed_to_closed: min 30, median 198, max 365 (uniform across configured range)
+- date_first_payment NULL rate: 21% (matches Day 5 profiling exactly)
+
+**Disclosure:** Lifecycle dates are synthesized, not from FEMA. Cycle-time analytics in this project demonstrate the modeling pattern but are not statements about real NFIP claim-processing performance.
