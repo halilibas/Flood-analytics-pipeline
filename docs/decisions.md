@@ -108,6 +108,8 @@ This validation matters: the pipeline doesn't just run; it produces correct numb
 - This query exists because `hurricane_season_flag` is a domain attribute on dim_date. Without it, the same insight would require month-comparison logic in every query.
 
 
+
+
 ## 2026-06-28 — Synthesized claim lifecycle dates (silver layer)
 
 FEMA does not provide `date_filed`, `date_first_payment`, or `date_closed`. Synthesized in `silver.claims_clean` using deterministic per-claim seeded offsets from `dateOfLoss`:
@@ -124,3 +126,17 @@ FEMA does not provide `date_filed`, `date_first_payment`, or `date_closed`. Synt
 - date_first_payment NULL rate: 21% (matches Day 5 profiling exactly)
 
 **Disclosure:** Lifecycle dates are synthesized, not from FEMA. Cycle-time analytics in this project demonstrate the modeling pattern but are not statements about real NFIP claim-processing performance.
+
+
+## 2026-06-30 — dim_agent: SCD Type 1 + Delta time travel separation
+
+**Decision:** `gold.dim_agent` built as SCD Type 1 (75 rows, overwrite-on-change).
+
+**Why SCD1 over SCD2 for agents:**
+- Commission rate and agency assignment changes aren't analytically meaningful for claims analysis (no KPI depends on agent-attribute-at-time-of-claim)
+- SCD2 would add operational complexity (effective_date / expiration_date / is_current / MERGE) without analytical payoff
+- Upgradable to SCD2 in future without breaking changes if agent productivity tracking becomes a requirement
+
+**Demonstrated and documented:** modeling history (SCD type) and storage history (Delta versions) are decoupled. Simulated a commission rate change → overwrote dim_agent → row count stayed at 75 (no analytical history row added) → used `VERSION AS OF 1` to recover the pre-change state from the Delta transaction log. **The SCD type controls what analysts see; Delta time travel controls what engineers can recover for audit/debugging.**
+
+This distinction is a Delta Lake capability that traditional dimensional modeling doesn't have. Builds the conceptual ground for tomorrow's SCD2 implementation where the row-count semantics will be the opposite (changes ADD rows rather than overwriting).
