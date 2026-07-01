@@ -140,3 +140,16 @@ FEMA does not provide `date_filed`, `date_first_payment`, or `date_closed`. Synt
 **Demonstrated and documented:** modeling history (SCD type) and storage history (Delta versions) are decoupled. Simulated a commission rate change → overwrote dim_agent → row count stayed at 75 (no analytical history row added) → used `VERSION AS OF 1` to recover the pre-change state from the Delta transaction log. **The SCD type controls what analysts see; Delta time travel controls what engineers can recover for audit/debugging.**
 
 This distinction is a Delta Lake capability that traditional dimensional modeling doesn't have. Builds the conceptual ground for tomorrow's SCD2 implementation where the row-count semantics will be the opposite (changes ADD rows rather than overwriting).
+
+
+## 2026-06-30 — Surrogate key strategy: switched from monotonically_increasing_id to xxhash64
+
+**Bug found in initial dim_policy build.** The two-step MERGE INSERT used `MONOTONICALLY_INCREASING_ID()` as the surrogate key. This function is only unique *within a single query execution*, not across multiple executions. When the simulated policy change ran, the INSERT started ID assignment at the same low integers as the initial load — causing v1 and v2 of the same policy to share a `policy_key`. This would have broken point-in-time joins in fact_claims.
+
+**Fix:** switched surrogate key to `xxhash64(policy_number, policy_version)`. Advantages:
+- Deterministic (same natural key + version → same surrogate every time)
+- Cross-run stable (rebuilds produce identical keys)
+- Unique per version by construction
+- Distinct from initial-load range
+
+**Trade-off:** hashed surrogates are less human-friendly than sequential IDs. In production, Delta Lake IDENTITY columns are the better solution but require table redefinition. For portfolio scope, hash-based surrogate is defensible and demonstrates awareness of the pitfall.
