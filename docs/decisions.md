@@ -153,3 +153,20 @@ This distinction is a Delta Lake capability that traditional dimensional modelin
 - Distinct from initial-load range
 
 **Trade-off:** hashed surrogates are less human-friendly than sequential IDs. In production, Delta Lake IDENTITY columns are the better solution but require table redefinition. For portfolio scope, hash-based surrogate is defensible and demonstrates awareness of the pitfall.
+
+
+## 2026-07-04 — Surrogate key discipline: always assert uniqueness
+
+Two distinct surrogate key bugs caught in Week 2 dim builds:
+
+** dim_policy:** `monotonically_increasing_id()` reused ID ranges across separate MERGE executions. Fixed with `xxhash64(natural_key, version)`.
+
+** dim_geography:** `xxhash64` didn't include all columns that varied in the DataFrame. Rows differing on non-hashed attributes collided. Fixed by expanding hash to include every identifying column.
+
+Both bugs would have caused silent data corruption in fact table joins. Both were caught by the same assertion pattern:
+
+```python
+assert n_total == n_distinct_keys, "Surrogate key collision"
+```
+
+**Rule adopted:** every gold dim build ends with a uniqueness assertion. Cheap to write, catches the bug class both mechanisms produce. Now a permanent template.
