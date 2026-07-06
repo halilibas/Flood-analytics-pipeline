@@ -170,3 +170,12 @@ assert n_total == n_distinct_keys, "Surrogate key collision"
 ```
 
 **Rule adopted:** every gold dim build ends with a uniqueness assertion. Cheap to write, catches the bug class both mechanisms produce. Now a permanent template.
+
+
+## 2026-07-06 — fact_claims v1: point-in-time joins on SCD2 dims
+
+**Decision:** For SCD2 dims (dim_policy, dim_customer), fact_claims FKs resolve to the version of the entity in effect on `dateOfLoss` — not the current version.
+
+**Point-in-time filter:** dim.effective_date <= claim.dateOfLoss < COALESCE(dim.expiration_date, '9999-12-31')
+
+**Why:** loss ratio analytics require premium-earned at time of loss. If FKs always pointed to the current version, historical loss ratios would float every time a policy renewed. Point-in-time joins tie each historical claim to the specific policy state that was priced against it.
