@@ -1,6 +1,6 @@
 # Project Context
 
-This project is an end-to-end data engineering pipeline for insurance claims analytics.
+This project is an end-to-end data engineering pipeline for flood claims analytics.
 
 The goal is to build a realistic portfolio project that shows how raw insurance data can be ingested, cleaned, modeled, tested, and served for business analysis. The project uses FEMA NFIP flood insurance claims data as the main public dataset, along with synthetic policy, customer, and agent data to make the data model closer to what an insurance company might work with internally.
 
