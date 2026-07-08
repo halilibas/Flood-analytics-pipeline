@@ -159,3 +159,55 @@ FEMA redacts city to "Currently Unavailable". Granularity available at lat/long 
 
 ### Bool encoding standardized in silver
 All FEMA *Indicator fields cast from 0/1 integer to BOOLEAN at silver layer.
+
+# Data Model — Gold Layer Star Schema
+
+**Version 2** — Week 2 build with SCD2, role-playing dates, and Kimball UNKNOWN sentinel row for orphan geography FKs.
+
+![Star schema v2](data_model_v2.png)
+
+## Schema highlights
+
+- **Fact:** `fact_claims` — grain is one row per FEMA claim, 10 FKs total
+- **Dimensions:** 6 tables
+  - SCD Type 2: `dim_policy`, `dim_customer`
+  - SCD Type 1: `dim_agent`, `dim_geography`, `dim_cat_event`
+  - Calendar: `dim_date` (role-playing × 4)
+
+## Role-playing dim_date
+
+`dim_date` joins to `fact_claims` 4 times as different FK columns:
+- `date_of_loss_key` → the day water entered the building
+- `date_filed_key` → the day the claim was submitted
+- `date_first_payment_key` → the day the first payment was issued (NULL if none)
+- `date_closed_key` → the day the claim closed
+
+Single physical dim, four analytical roles.
+
+## SCD Type 2 semantics
+
+`dim_policy` and `dim_customer` maintain multiple rows per natural key. Each version has:
+- `effective_date` — when this version started
+- `expiration_date` — when this version stopped (NULL if current)
+- `is_current` — flag for the active version
+
+`fact_claims` FKs point to the version in effect on `dateOfLoss` via point-in-time joins:
+
+```sql
+JOIN dim_policy p ON p.policy_number = ...
+  AND claim.dateOfLoss >= p.effective_date
+  AND claim.dateOfLoss < COALESCE(p.expiration_date, DATE '9999-12-31')
+```
+
+This is the canonical Kimball motivation for SCD2: loss ratio analytics need premium-at-time-of-loss, not today's premium.
+
+## Orphan FK handling
+
+`dim_geography` includes an UNKNOWN sentinel row for claims with insufficient location data. Kimball "handling of missing dimension rows" pattern. Guarantees every fact FK resolves to a dim row.
+
+## Grain and cardinality
+
+- `fact_claims`: 2,721,780 rows (1 per FEMA claim)
+- `dim_policy`: 2,721,781 rows (2.72M v1 + 1 simulated v2 for Day 17 demo)
+- `dim_customer`: 2,721,781 rows (2.72M v1 + 1 simulated v2 for Day 18 demo)
+- `dim_geography`: 327,255 rows (including UNKNOWN sentinel)
