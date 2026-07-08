@@ -13,6 +13,7 @@ The goal is to build a small but realistic insurance analytics pipeline: ingest 
 End-to-end pipeline: FEMA NFIP raw → Bronze Delta → Silver typed/cleaned → Gold star schema → Streamlit dashboard.
 
 ![Dashboard](docs/dashboard_screenshot.png)
+![Cycle time distribution](docs/dashboard_screenshot_histogram.png)
 
 **KPI validation** — total payouts by event match published NFIP industry figures within ~5%:
 
@@ -42,9 +43,11 @@ Sanity check: hurricane-season claims average **2.8x higher severity** than off-
 
 # Architecture
 
-_Diagram coming soon._
-
 **Data flow:** External sources → Bronze (Delta) → Silver (Delta) → Gold (dbt marts) → Streamlit
+
+### Data model (v2)
+
+![Star schema v2](docs/data_model_v2.png)
 
 ## Stack
 
