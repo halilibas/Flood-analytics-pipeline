@@ -13,11 +13,10 @@ import streamlit as st
 
 st.set_page_config(
     page_title = "Flood Claims Analytics Pipeline",
-    page_icon = "🌊",
     layout = "wide",
 )
 
-DATA_DIR = Path(__file__).parent / "sample_data"
+DATA_DIR = Path(__file__).parent / "data"
 
 # Data loading
 
@@ -37,6 +36,22 @@ def load_claims_by_state() -> pd.DataFrame:
 def load_season_comparison() -> pd.DataFrame:
     return pd.read_csv(DATA_DIR / "season_comparison.csv")
 
+@st.cache_data
+def load_cycle_time_histogram() -> pd.DataFrame:
+    return pd.read_csv(DATA_DIR / "cycle_time_histogram.csv")
+
+@st.cache_data
+def load_coastal_vs_inland() -> pd.DataFrame:
+    return pd.read_csv(DATA_DIR / "coastal_vs_inland.csv")
+
+@st.cache_data
+def load_damage_by_cause() -> pd.DataFrame:
+    return pd.read_csv(DATA_DIR / "damage_by_cause_category.csv")
+
+@st.cache_data
+def load_region_x_event() -> pd.DataFrame:
+    return pd.read_csv(DATA_DIR / "region_x_event_type.csv")
+
 # Page header
 
 st.title("Flood Claims Analytics Pipeline")
@@ -53,13 +68,12 @@ total_paid = events["total_paid_billions"].sum()
 total_claims = events["claim_count"].sum()
 biggest_event = events.iloc[0]
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Records Modeled", "2.72M")
-col2.metric("CAT Events Tracked", f"{len(events):,}")
-col3.metric("Top Event Payout", f"${biggest_event['total_paid_billions']:.1f}B",
-                help=f"{biggest_event['flood_event_name']}"
-            )
-col4.metric("Pipeline Layers", "Bronze -> Silver -> Gold")
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("Records Modeled", "2.72M")
+col2.metric("Dimensions", "6")
+col3.metric("CAT Events Tracked", "192")
+col4.metric("Top Event Payout", "$16.3B", help="Hurricane Katrina — matches published NFIP")
+col5.metric("Stack Depth", "Bronze → Silver → Gold")
 
 st.divider()
 
@@ -138,6 +152,138 @@ with col_b:
     fig_season_avg.update_traces(textposition="outside", texttemplate="$%{text:,.0f}")
     fig_season_avg.update_layout(showlegend=False)
     st.plotly_chart(fig_season_avg, use_container_width=True)
+
+st.divider()
+st.header("Star Schema Analytics")
+st.caption(
+    "Charts below use the full v1 star schema — six dimensions with SCD Type 2 on policy "
+    "and customer, role-playing date dimensions for claim lifecycle, and Kimball UNKNOWN "
+    "sentinel row for orphan geography FKs. Each query joins fact_claims to 2-4 dimensions."
+)
+
+# Chart 5: Cycle time distribution from synthesized lifecycle dates
+st.subheader("Claim Cycle Time Distribution")
+st.caption(
+    "Distribution of days from claim filing to closure across all 2.72M claims. "
+    "Lifecycle dates were synthesized deterministically from `dateOfLoss` "
+    "(FEMA doesn't provide them) — the resulting distribution is uniform between "
+    "30 and 365 days by design. The chart demonstrates that the role-playing date "
+    "dimensions in fact_claims v1 (`date_filed_key`, `date_closed_key`) "
+    "produce measurable cycle-time analytics; real historical dates would show "
+    "the actual claim-processing shape."
+)
+
+cycle = load_cycle_time_histogram()
+fig_cycle = px.bar(
+    cycle,
+    x="days_filed_to_closed",
+    y="n_claims",
+    labels={
+        "days_filed_to_closed": "Days from filing to closure",
+        "n_claims": "Number of claims",
+    },
+)
+fig_cycle.update_traces(marker_color="#1e40af")
+fig_cycle.update_layout(
+    height=400,
+    showlegend=False,
+    bargap=0.05,
+    margin=dict(l=60, r=20, t=20, b=60),  
+)
+st.plotly_chart(fig_cycle, use_container_width=True)
+
+
+# Chart 6: Coastal vs Inland 
+st.subheader("Coastal vs Inland Claim Severity")
+st.caption(
+    "Enabled by dim_geography's `is_coastal` domain attribute. One-line filter to compare "
+    "loss profiles between coastal and inland flood exposure. Note: coastal here means any "
+    "ocean or Great Lakes border, not hurricane-exposed states only."
+)
+
+coastal = load_coastal_vs_inland()
+coastal["exposure"] = coastal["is_coastal"].map({True: "Coastal", False: "Inland"})
+
+col_a, col_b = st.columns(2)
+with col_a:
+    fig_coastal_severity = px.bar(
+        coastal,
+        x="exposure",
+        y="avg_severity",
+        labels={"exposure": "", "avg_severity": "Avg claim severity ($)"},
+        text="avg_severity",
+        title="Average claim severity",
+        color="exposure",
+        color_discrete_map={"Coastal": "#1e40af", "Inland": "#93c5fd"},
+    )
+    fig_coastal_severity.update_traces(textposition="outside", texttemplate="$%{text:,.0f}")
+    fig_coastal_severity.update_layout(showlegend=False)
+    st.plotly_chart(fig_coastal_severity, use_container_width=True)
+
+with col_b:
+    fig_coastal_total = px.pie(
+        coastal,
+        names="exposure",
+        values="total_paid_billions",
+        title="Total paid ($B) by exposure",
+        color="exposure",
+        color_discrete_map={"Coastal": "#1e40af", "Inland": "#93c5fd"},
+        hole=0.4,
+    )
+    st.plotly_chart(fig_coastal_total, use_container_width=True)
+
+# Chart 7: Regional CAT event impact 
+st.subheader("CAT Event Impact by Region")
+st.caption(
+    "3-dimension join: fact_claims × dim_geography × dim_cat_event. Shows how named storms "
+    "concentrate impact in the Southeast."
+)
+
+region_event = load_region_x_event()
+fig_region = px.bar(
+    region_event,
+    x="region",
+    y="total_paid_billions",
+    color="event_type",
+    labels={
+        "region": "Region",
+        "total_paid_billions": "Total paid ($B)",
+        "event_type": "Event type",
+    },
+    barmode="group",
+    text="total_paid_billions",
+)
+fig_region.update_traces(textposition="outside", texttemplate="$%{text}B")
+fig_region.update_layout(height=450)
+fig_region.update_yaxes(
+    type="log",
+    showgrid=True,
+    minor=dict(showgrid=False),
+)
+st.plotly_chart(fig_region, use_container_width=True)
+
+# Chart 8: Damage by cause category 
+st.subheader("Cause of Damage: Analytical Rollup")
+st.caption(
+    "Uses `bronze.ref_cause_of_damage` reference table with `cause_category` rollup "
+    "(Coastal / Inland Flooding / Rainfall / Erosion / Earth Movement / Expedited)."
+)
+
+cause = load_damage_by_cause()
+fig_cause = px.bar(
+    cause.sort_values("total_paid_billions", ascending=True),
+    x="total_paid_billions",
+    y="cause_category",
+    orientation="h",
+    labels={
+        "total_paid_billions": "Total paid ($B)",
+        "cause_category": "",
+    },
+    text="total_paid_billions",
+)
+fig_cause.update_traces(textposition="outside", texttemplate="$%{text}B")
+fig_cause.update_layout(height=400)
+st.plotly_chart(fig_cause, use_container_width=True)
 
 # Footer
 
