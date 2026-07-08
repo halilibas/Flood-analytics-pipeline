@@ -6,11 +6,13 @@ An end-to-end data engineering project using FEMA NFIP flood claims data and syn
 
 The goal is to build a small but realistic insurance analytics pipeline: ingest raw claims data, clean and standardize it through bronze and silver layers, model business-ready tables in a gold layer, and surface claims KPIs in a Streamlit dashboard.
 
-## What's Working Week 2
+
+
+## What's Working 
 
 End-to-end pipeline: FEMA NFIP raw → Bronze Delta → Silver typed/cleaned → Gold star schema → Streamlit dashboard.
 
-[Dashboard](docs/dashboard_screenshot.png)
+![Dashboard](docs/dashboard_screenshot.png)
 
 **KPI validation** — total payouts by event match published NFIP industry figures within ~5%:
 
@@ -20,18 +22,22 @@ End-to-end pipeline: FEMA NFIP raw → Bronze Delta → Silver typed/cleaned →
 | Hurricane Sandy | $8.96B | ~$8.5B | ~5% |
 | Hurricane Harvey | $9.06B | ~$9B | ~1% |
 
-**Domain insight surfaced by the model** — hurricane-season claims (Jun–Nov) average $40,769 vs $14,641 off-season (2.8x severity). The query is one line because `hurricane_season_flag` is a domain attribute on `dim_date`.
+**Star schema depth** — six dimensions, SCD Type 2 on policy and customer, role-playing date dimensions for claim lifecycle:
 
-### Tables built
+| Layer | Table | Type | Rows |
+|---|---|---|---|
+| Bronze | `bronze.fema_claims_raw` | Raw | 2,721,780 |
+| Bronze | `bronze.ref_{occupancy_type, cause_of_damage, location_of_contents, building_description, flood_zone}` | Reference | 14 / 12 / 7 / 20 / 12 |
+| Silver | `silver.claims_clean` | Cleaned + lifecycle dates | 2,721,780 |
+| Gold | `gold.dim_date` | Calendar | 22,280 |
+| Gold | `gold.dim_agent` | SCD1 | 75 |
+| Gold | `gold.dim_policy` | SCD2 (via Delta MERGE) | 2,721,781 |
+| Gold | `gold.dim_customer` | SCD2 (via Delta MERGE) | 2,721,781 |
+| Gold | `gold.dim_geography` | SCD1 + Kimball UNKNOWN sentinel | 327,255 |
+| Gold | `gold.dim_cat_event` | SCD1 | 192 |
+| Gold | `gold.fact_claims` v1 | 10 FKs, cycle time measures | 2,721,780 |
 
-| Layer | Table | Rows |
-|---|---|---|
-| Bronze | `bronze.fema_claims_raw` | 2,721,780 |
-| Bronze | `bronze.synthetic_{agents,customers,policies}_raw` | 75 / 2.72M / 2.72M |
-| Silver | `silver.claims_clean` | 2,721,780 |
-| Silver | `silver.claims_enriched` | 2,721,780 |
-| Gold | `gold.dim_date` | 22,280 |
-| Gold | `gold.fact_claims` v0 | 2,721,780 (partitioned by loss_year) |
+Sanity check: hurricane-season claims average **2.8x higher severity** than off-season — directionally correct for P&C flood.
 
 
 # Architecture
