@@ -179,3 +179,27 @@ assert n_total == n_distinct_keys, "Surrogate key collision"
 **Point-in-time filter:** dim.effective_date <= claim.dateOfLoss < COALESCE(dim.expiration_date, '9999-12-31')
 
 **Why:** loss ratio analytics require premium-earned at time of loss. If FKs always pointed to the current version, historical loss ratios would float every time a policy renewed. Point-in-time joins tie each historical claim to the specific policy state that was priced against it.
+
+
+## 2026-07-07 — Dashboard v2 and data model v2 for Week 2
+
+### Dashboard refresh
+- 4 new charts enabled by v1 star schema:
+  - Cycle time distribution histogram (with honest caption about synthesized dates)
+  - Coastal vs Inland claim severity
+  - CAT event impact by region (with log Y-axis to show all magnitude ranges)
+  - Cause of damage rollup (using bronze.ref_cause_of_damage reference table)
+- 4 existing Week 1 charts re-generated from v1 gold tables — validated match with prior numbers
+- 8 aggregated CSVs committed under `dashboard/sample_data/` for reproducibility
+- Streamlit KPI strip expanded to show "Dimensions: 6" — visible recruiter signal
+
+### Cycle time chart  disclosure
+Initial state-by-state chart showed near-uniform means (~199 days) across all states — an artifact of uniform random offset synthesis. Replaced with a distribution histogram plus caption disclosing synthesis. "The query works, but the chart tells the wrong story" was the lesson; distribution histogram + caption is the right framing.
+
+### Data model v2
+- ERD created in dbdiagram.io export at `docs/data_model_v2.png`
+- Six dimensions + fact_claims with 10 FKs (6 dim, 4 role-playing date)
+- SCD2 dims annotated in diagram title bar
+- Role-playing dim_date shown with "x4 role-playing" annotation
+- v1 ERD (`data_model_v1.png`) retained for history
+- data_model.md updated with both versions and rationale for deferring dim_property to future work
