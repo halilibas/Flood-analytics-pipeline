@@ -58,7 +58,7 @@ st.title("Flood Claims Analytics Pipeline")
 st.caption(
 "End-to-end DE pipeline over FEMA NFIP claims + synthetic policy data. "
 "Bronze → Silver → Gold star schema in Delta Lake. "
-"Source: [github.com/halilibas/insurance-claims-pipeline](https://github.com/halilibas/Flood-analytics-pipeline)"
+"Source: [github.com/halilibas/Flood-analytics-pipeline](https://github.com/halilibas/Flood-analytics-pipeline)"
 )
 
 # Top KPI strip
