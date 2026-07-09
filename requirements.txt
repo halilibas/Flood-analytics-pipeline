@@ -1,13 +1,19 @@
-certifi==2026.5.20
-charset-normalizer==3.4.7
-Faker==40.21.0
-idna==3.18
-numpy==2.4.6
-pandas==3.0.3
-py4j==0.10.9.7
+# Direct dependencies for local development.
+# The full pipeline runs on Databricks (Spark provided by the runtime);
+# these pins cover local generators, notebooks, and the Streamlit dashboard.
+
+# Spark (local dev / notebook parity with Databricks Runtime)
 pyspark==3.5.0
-python-dateutil==2.9.0.post0
-python-dotenv==1.2.2
+
+# Data generation + local processing
+pandas==3.0.3
+numpy==2.4.6
+pyarrow==24.0.0          # parquet backend for pandas read/write
+Faker==40.21.0
+
+# Dashboard
+streamlit==1.58.0
+plotly==6.8.0
+
+# HTTP (OpenFEMA API pulls in warmup/exploration)
 requests==2.34.2
-six==1.17.0
-urllib3==2.7.0
