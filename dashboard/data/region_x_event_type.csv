@@ -1,0 +1,11 @@
+region,event_type,n_claims,total_paid_billions,avg_severity
+Southeast,Hurricane,946701,52.07,55005
+Northeast,Hurricane,214638,11.01,51310
+Southeast,Tropical Storm,91656,2.57,28083
+Northeast,Tropical Storm,20180,0.68,33865
+Territories,Hurricane,13488,0.13,9516
+Midwest,Hurricane,4950,0.13,26805
+West,Hurricane,1100,0.04,33324
+Midwest,Tropical Storm,1128,0.02,19480
+Territories,Tropical Storm,758,0.0,5707
+West,Tropical Storm,108,0.0,38204

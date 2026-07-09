@@ -1,0 +1,3 @@
+is_coastal,n_claims,avg_severity,total_paid_billions,avg_days_to_close
+false,217619,19050,4.15,199.0
+true,2487720,34356,85.47,198.6

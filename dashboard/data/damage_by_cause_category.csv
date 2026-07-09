@@ -1,0 +1,8 @@
+cause_category,n_claims,avg_severity,total_paid_billions,pct_zero_payment
+Rainfall,1206336,30077,36.28,21.0
+Coastal,686590,36770,25.25,17.6
+Inland Flooding,560408,35070,19.65,15.5
+Other,206254,30270,6.24,50.1
+Expedited,21771,99466,2.17,23.0
+Erosion,984,27227,0.03,54.1
+Earth Movement,1777,6718,0.01,41.9

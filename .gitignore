@@ -246,7 +246,7 @@ data/
 !**/sample_data/*.csv
 !**/sample_data/*.json
 !**/reference_data/*.csv
-!dashboard/data/
+!dashboard/data/*.csv
 !docs/**/*.json
 
 # Databricks
