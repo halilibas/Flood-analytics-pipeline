@@ -203,3 +203,27 @@ Initial state-by-state chart showed near-uniform means (~199 days) across all st
 - Role-playing dim_date shown with "x4 role-playing" annotation
 - v1 ERD (`data_model_v1.png`) retained for history
 - data_model.md updated with both versions and rationale for deferring dim_property to future work
+
+## 2026-07-09 — dbt migration approach: sources over refactor
+
+**Context:** Gold-layer transformations from PySpark to dbt. Decision on how to handle bronze and silver.
+
+**Decision:** Bronze and silver stay in PySpark. dbt reads them as `sources`, not migrated as models.
+
+**Why:**
+- Bronze ingestion is inherently procedural (CSV parsing, schema declaration, audit columns) — awkward as SQL
+- Silver cleaning is 11+ specific rules with null-handling logic — cleaner as PySpark
+- dbt's strength is dimensional modeling and transformation, which is gold-layer work
+- Attempting to do everything in dbt would inflate scope without much analytical payoff
+
+### dbt profile: separate schema (gold_dbt) alongside existing gold
+
+**Decision:** dbt materializes to `workspace.gold_dbt.*`, not `workspace.gold.*`.
+
+**Why:**
+- Prevents accidental overwrites of PySpark-managed gold tables during dbt development
+- Allows side-by-side comparison of dbt output vs PySpark output for validation
+- Once dbt output is byte-identical to PySpark, dashboard and other consumers can migrate to gold_dbt.*
+- Clean rollback: if dbt work regresses, gold tables remain untouched
+
+
