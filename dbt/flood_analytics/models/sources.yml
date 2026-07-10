@@ -1,0 +1,37 @@
+version: 2
+
+sources:
+  - name: bronze
+    catalog: workspace
+    schema: bronze
+    description: "Bronze layer — raw ingested FEMA + synthetic data with audit columns"
+    tables:
+      - name: fema_claims_raw
+        description: "2.72M raw FEMA NFIP claims, 70 StringType columns"
+
+      - name: ref_occupancy_type
+        description: "FEMA occupancy type code lookup"
+      - name: ref_cause_of_damage
+        description: "FEMA cause of damage code lookup"
+      - name: ref_location_of_contents
+        description: "FEMA location of contents code lookup"
+      - name: ref_building_description
+        description: "FEMA building description code lookup"
+      - name: ref_flood_zone
+        description: "FEMA flood zone code lookup"
+
+  - name: silver
+    catalog: workspace
+    schema: silver
+    description: "Silver layer — cleaned, typed FEMA + synthetic data"
+    tables:
+      - name: claims_clean
+        description: "2.72M cleaned claims with synthesized lifecycle dates"
+      - name: agents_clean
+        description: "75 synthetic agents"
+      - name: customers_clean
+        description: "2.72M synthetic customers"
+      - name: policies_clean
+        description: "2.72M synthetic policies with fema_claim_id bridge"
+      - name: claims_enriched
+        description: "Claims joined to policy/customer/agent (101 columns)"

@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_claims
+    description: "Cleaned, renamed claims from silver.claims_clean"
+    columns:
+      - name: fema_claim_id
+        description: "FEMA-assigned UUID, natural key"
+        tests:
+          - unique
+          - not_null
+      - name: date_of_loss
+        description: "Date when water first entered the insured building"
+        tests:
+          - not_null
+      - name: state
+        description: "2-letter state abbreviation (nullable — some FEMA rows missing)"
