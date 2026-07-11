@@ -227,3 +227,20 @@ Initial state-by-state chart showed near-uniform means (~199 days) across all st
 - Clean rollback: if dbt work regresses, gold tables remain untouched
 
 
+## 2026-07-XX — dbt staging tests: relationships checks introduced
+
+Added `relationships` tests to `stg_policies` for `customer_id → stg_customers` and `agent_id → stg_agents`. These are dbt's declarative FK integrity checks — run as SQL under the hood ("SELECT * FROM stg_policies WHERE customer_id NOT IN (SELECT customer_id FROM stg_customers)"), fails if any row returned.
+
+This is the same class of check I did informally with row count assertions in Week 1's silver enrichment (Day 11). Now it's formalized as a test that runs on every `dbt test` invocation. If the Day 9 generator drift bug ever recurred, this would catch it immediately.
+
+Pattern to be extended in mart layer: every FK on fact_claims will have a `relationships` test to its target dim.
+
+**Interview vocabulary demonstrated:** dbt `relationships` test = declarative referential integrity check.
+
+## 2026-07-11 — Staging layer pattern: view materialization + snake_case renaming
+
+All 4 staging models materialize as views (not tables) — staging is a thin renaming/aliasing layer, not a heavy transformation. Views cost nothing to rebuild and stay current with source data.
+
+**Renaming discipline:** All models rename camelCase (FEMA + generator convention) to snake_case (dbt/SQL convention) at the staging layer. Downstream marts consume snake_case exclusively. Isolates the naming convention boundary to one place.
+
+**Not tracked:** Full column descriptions in `schema.yml` for every column of every model. Documented only interesting columns — natural keys, FKs, domain-specific attributes. Over-documenting adds maintenance burden without value.
