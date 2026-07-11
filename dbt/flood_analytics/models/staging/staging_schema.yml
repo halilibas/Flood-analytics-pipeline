@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_claims
-    description: "Cleaned, renamed claims from silver.claims_clean"
+    description: "Cleaned, renamed FEMA claims with synthesized lifecycle dates. Staging layer over silver.claims_clean."
     columns:
       - name: fema_claim_id
         description: "FEMA-assigned UUID, natural key"
@@ -14,4 +14,76 @@ models:
         tests:
           - not_null
       - name: state
-        description: "2-letter state abbreviation (nullable — some FEMA rows missing)"
+        description: "2-letter state abbreviation (nullable — some FEMA rows have partial location)"
+      - name: total_claim_amount
+        description: "Derived downstream in fact model"
+
+  - name: stg_agents
+    description: "Cleaned, renamed synthetic insurance agents. Staging over silver.agents_clean."
+    columns:
+      - name: agent_id
+        description: "Synthetic agent UUID, natural key"
+        tests:
+          - unique
+          - not_null
+      - name: agent_full_name
+        description: "Concatenated first + last name"
+        tests:
+          - not_null
+      - name: agency_state
+        description: "2-letter state; agents biased toward high-claim states (FL, LA, NY, TX, NJ)"
+        tests:
+          - not_null
+
+  - name: stg_customers
+    description: "Cleaned, renamed synthetic customers. Staging over silver.customers_clean."
+    columns:
+      - name: customer_id
+        description: "Synthetic customer UUID, natural key"
+        tests:
+          - unique
+          - not_null
+      - name: customer_full_name
+        description: "Concatenated first + last name"
+        tests:
+          - not_null
+      - name: address_state
+        description: "2-letter state where customer is located"
+        tests:
+          - not_null
+
+  - name: stg_policies
+    description: "Cleaned, renamed synthetic policies with FEMA claim bridge. Staging over silver.policies_clean."
+    columns:
+      - name: policy_number
+        description: "Synthetic policy number (format: NFIP-YYYY-XXXXXXXX)"
+        tests:
+          - unique
+          - not_null
+      - name: fema_claim_id
+        description: "FK to FEMA claim id from Day 9 generator bridge"
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "FK to stg_customers.customer_id"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: agent_id
+        description: "FK to stg_agents.agent_id"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_agents')
+              field: agent_id
+      - name: annual_premium
+        description: "Annual premium amount (real NFIP-realistic range, median ~$925)"
+        tests:
+          - not_null
+      - name: effective_date
+        description: "Policy start date"
+        tests:
+          - not_null
