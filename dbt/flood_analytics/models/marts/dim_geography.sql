@@ -53,12 +53,12 @@ with_derived AS (
             ELSE 'Unknown'
         END AS region,
 
-        state IN (
-            'AK', 'AL', 'CA', 'CT', 'DE', 'FL', 'GA', 'HI', 'IL', 'IN', 'LA',
-            'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'NH', 'NJ', 'NY', 'NC', 'OH',
-            'OR', 'PA', 'RI', 'SC', 'TX', 'VA', 'WA', 'WI', 'PR', 'VI', 'GU',
-            'AS', 'MP', 'DC'
-        ) AS is_coAStal
+        coalesce(state in (
+    'AK', 'AL', 'CA', 'CT', 'DE', 'FL', 'GA', 'HI', 'IL', 'IN', 'LA',
+    'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'NH', 'NJ', 'NY', 'NC', 'OH',
+    'OR', 'PA', 'RI', 'SC', 'TX', 'VA', 'WA', 'WI', 'PR', 'VI', 'GU',
+    'AS', 'MP', 'DC'
+), false) as is_coastal
     FROM SOURCE
 ),
 

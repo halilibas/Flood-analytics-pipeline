@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Calendar dimension. Grain: one row per day. Smart key (YYYYMMDD as INT)."
+    columns:
+      - name: date_key
+        description: "Smart PK — YYYYMMDD INT (e.g., 20050829 = Hurricane Katrina landfall)"
+        tests:
+          - unique
+          - not_null
+      - name: date
+        description: "The DATE value"
+        tests:
+          - not_null
+      - name: hurricane_season_flag
+        description: "TRUE if month is June-November (Atlantic hurricane season)"
+
+  - name: dim_agent
+    description: "Insurance agent dimension (SCD1). 75 rows."
+    columns:
+      - name: agent_key
+        description: "Surrogate PK via xxhash64(agent_id)"
+        tests:
+          - unique
+          - not_null
+      - name: agent_id
+        description: "Natural key (UUID)"
+        tests:
+          - unique
+          - not_null
+      - name: agent_full_name
+        description: "Concatenated first + last name"
+        tests:
+          - not_null
+
+  - name: dim_geography
+    description: "Geographic dimension (SCD1). Includes Kimball UNKNOWN sentinel row for orphan FK handling."
+    columns:
+      - name: geography_key
+        description: "Surrogate PK via 11-column xxhash64 with decimal-cast lat/lng"
+        tests:
+          - unique
+          - not_null
+      - name: state
+        description: "2-letter state code (NULL for sentinel row)"
+      - name: region
+        description: "Rollup — Northeast / Southeast / Midwest / West / Territories / Unknown"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Northeast', 'Southeast', 'Midwest', 'West', 'Territories', 'Unknown']
+      - name: is_coastal
+        description: "TRUE for states with ocean or Great Lakes exposure"
+        tests:
+          - not_null
+
+  - name: dim_cat_event
+    description: "Catastrophe event dimension (SCD1). Derived from FEMA floodEvent."
+    columns:
+      - name: cat_event_key
+        description: "Surrogate PK via xxhash64(event_name)"
+        tests:
+          - unique
+          - not_null
+      - name: event_name
+        description: "FEMA-provided event name"
+        tests:
+          - unique
+          - not_null
+      - name: event_type
+        description: "Category: Hurricane / Tropical Storm / UNNAMED / Other"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Hurricane', 'Tropical Storm', 'UNNAMED', 'Other']

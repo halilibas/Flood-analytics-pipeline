@@ -11,7 +11,7 @@ Prerequisites:
 Configure your `~/.dbt/profiles.yml`:
 
 ```yaml
-insurance_claims:
+flood_analytics:
   target: dev
   outputs:
     dev:
