@@ -8,30 +8,76 @@ sources:
     tables:
       - name: fema_claims_raw
         description: "2.72M raw FEMA NFIP claims, 70 StringType columns"
-
       - name: ref_occupancy_type
-        description: "FEMA occupancy type code lookup"
       - name: ref_cause_of_damage
-        description: "FEMA cause of damage code lookup"
       - name: ref_location_of_contents
-        description: "FEMA location of contents code lookup"
       - name: ref_building_description
-        description: "FEMA building description code lookup"
       - name: ref_flood_zone
-        description: "FEMA flood zone code lookup"
 
   - name: silver
     catalog: workspace
     schema: silver
     description: "Silver layer — cleaned, typed FEMA + synthetic data"
+    loaded_at_field: _ingested_at
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 30, period: day}
     tables:
       - name: claims_clean
         description: "2.72M cleaned claims with synthesized lifecycle dates"
       - name: agents_clean
-        description: "75 synthetic agents"
       - name: customers_clean
-        description: "2.72M synthetic customers"
       - name: policies_clean
-        description: "2.72M synthetic policies with fema_claim_id bridge"
       - name: claims_enriched
-        description: "Claims joined to policy/customer/agent (101 columns)"
+
+  - name: gold
+    catalog: workspace
+    schema: gold
+    description: >
+      Gold layer SCD Type 2 dimensions owned by PySpark builds.
+      dbt reads these as sources rather than rebuilding them as dbt models
+      because their SCD2 mechanics (two-step Delta MERGE) predate the dbt
+      migration and are documented in decisions.md. Downstream marts
+      (fact_claims) reference these via source().
+    tables:
+      - name: dim_policy
+        description: "SCD2 policy dimension. Grain: one row per policy_number+version. 2.72M v1 rows + 1 simulated v2."
+        columns:
+          - name: policy_key
+            description: "Surrogate PK via xxhash64(policy_number, policy_version)"
+            tests:
+              - unique
+              - not_null
+          - name: policy_number
+            description: "Natural key, shared across versions"
+            tests:
+              - not_null
+          - name: is_current
+            description: "TRUE for the currently active version"
+            tests:
+              - not_null
+          - name: effective_date
+            description: "When this policy version became effective"
+            tests:
+              - not_null
+
+      - name: dim_customer
+        description: "SCD2 customer dimension. Grain: one row per customer_id+version. 2.72M v1 + 1 simulated v2."
+        columns:
+          - name: customer_key
+            description: "Surrogate PK via xxhash64(customer_id, customer_version)"
+            tests:
+              - unique
+              - not_null
+          - name: customer_id
+            description: "Natural key, shared across versions"
+            tests:
+              - not_null
+          - name: is_current
+            description: "TRUE for the currently active version"
+            tests:
+              - not_null
+          - name: effective_date
+            description: "When this customer version became effective"
+            tests:
+              - not_null
