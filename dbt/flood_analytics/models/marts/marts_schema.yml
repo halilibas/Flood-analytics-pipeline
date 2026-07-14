@@ -74,3 +74,113 @@ models:
           - not_null
           - accepted_values:
               values: ['Hurricane', 'Tropical Storm', 'UNNAMED', 'Other']
+
+  - name: fact_claims
+    description: >
+      Fact table for FEMA NFIP claims. Grain: one row per claim.
+      10 FKs (5 dim + 4 role-playing date + no policy_key means policy resolved via point-in-time).
+      Materialized as table, partitioned by loss_year (48 partitions).
+    columns:
+      - name: claim_key
+        description: "Surrogate PK via xxhash64(fema_claim_id)"
+        tests:
+          - unique
+          - not_null
+
+      - name: fema_claim_id
+        description: "Degenerate dim — FEMA UUID, natural key"
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_claims')
+              field: fema_claim_id
+
+      # SCD2 FKs: point-in-time resolved from source dims
+      - name: policy_key
+        description: "FK to dim_policy version in effect on date_of_loss (SCD2 point-in-time join)"
+        tests:
+          - not_null
+          - relationships:
+              to: source('gold', 'dim_policy')
+              field: policy_key
+
+      - name: customer_key
+        description: "FK to dim_customer version in effect on date_of_loss (SCD2 point-in-time join)"
+        tests:
+          - not_null
+          - relationships:
+              to: source('gold', 'dim_customer')
+              field: customer_key
+
+      # SCD1 FKs: direct joins
+      - name: agent_key
+        description: "FK to dim_agent (SCD1)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_agent')
+              field: agent_key
+
+      - name: geography_key
+        description: "FK to dim_geography — includes UNKNOWN sentinel for orphan resolution"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_geography')
+              field: geography_key
+              config:
+                severity: warn
+
+      - name: cat_event_key
+        description: "FK to dim_cat_event; NULL for non-CAT claims (~28%)"
+        tests:
+          - relationships:
+              to: ref('dim_cat_event')
+              field: cat_event_key
+              config:
+                where: "cat_event_key is not null"
+
+      # role playing date FKs
+      - name: date_of_loss_key
+        description: "FK to dim_date (role: date water first entered building)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: date_filed_key
+        description: "FK to dim_date (role: date claim was submitted)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: date_first_payment_key
+        description: "FK to dim_date (role: first payment date); NULL for denied claims (~21%)"
+        tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+              config:
+                where: "date_first_payment_key is not null"
+
+      - name: date_closed_key
+        description: "FK to dim_date (role: claim closure date)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: loss_year
+        description: "Partition column derived from year(date_of_loss)"
+        tests:
+          - not_null
+
+      - name: total_claim_amount
+        description: "Sum of building + contents + ICC paid amounts (NULLs coerced to 0 for sum)"
+        tests:
+          - not_null
