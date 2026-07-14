@@ -242,3 +242,13 @@ All 4 staging models materialize as views (not tables) — staging is a thin ren
 
 **Not tracked:** Full column descriptions in `schema.yml` for every column of every model. Documented only interesting columns — natural keys, FKs, domain-specific attributes. Over-documenting adds maintenance burden without value.
 
+## 2026-07-13 — fact_claims v1 in dbt: migration equivalence proven
+
+Ported PySpark fact_claims v1 to dbt. Three proofs of migration correctness:
+
+**1. Row count parity:** dbt fact_claims produces exactly 2,721,780 rows, matching PySpark.
+
+**2. Total value parity:** SUM(total_claim_amount) matches to 3 decimal places — $89.696B on both sides. Parity within $500K on an $89B aggregate.
+
+**3. Sliced analytical parity:** hurricane × state × year queries return industry-realistic numbers on both sides (Katrina LA $13B, Harvey TX $9B, Sandy NJ+NY $4.4B combined, Ian FL $5B). Small variance (<3%) traces to documented geography orphan handling.
+
