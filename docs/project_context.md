@@ -2,9 +2,9 @@
 
 This project is an end-to-end data engineering pipeline for flood claims analytics.
 
-The goal is to build a realistic portfolio project that shows how raw insurance data can be ingested, cleaned, modeled, tested, and served for business analysis. The project uses FEMA NFIP flood insurance claims data as the main public dataset, along with synthetic policy, customer, and agent data to make the data model closer to what an insurance company might work with internally.
+The goal is to build a realistic portfolio project that shows how raw flood data can be ingested, cleaned, modeled, tested, and served for business analysis. The project uses FEMA NFIP flood claims data as the main public dataset, along with synthetic policy, customer, and agent data.
 
-I chose this domain because insurance claims data has a good mix of real-world complexity: dates, locations, claim amounts, policy attributes, customer history, catastrophe events, and changing business entities over time. These are useful problems for practicing data engineering concepts like medallion architecture, dimensional modeling, data quality checks, incremental processing, and orchestration.
+I chose this domain because flood data has a good mix of real-world complexity: dates, locations, claim amounts, policy attributes, customer history, catastrophe events, and changing business entities over time. These are useful problems for practicing data engineering concepts like medallion architecture, dimensional modeling, data quality checks, incremental processing, and orchestration.
 
 The pipeline follows a medallion architecture:
 
@@ -12,7 +12,7 @@ The pipeline follows a medallion architecture:
 - **Silver:** cleaned, standardized, typed, and deduplicated data
 - **Gold:** business-ready tables modeled for analytics and reporting
 
-The final gold layer will support insurance KPIs such as claim frequency, claim severity, paid loss trends, claim cycle time, regional loss patterns, and estimated loss ratio where premium data is available or synthetically generated.
+The final gold layer will support claims KPIs such as claim frequency, claim severity, paid loss trends, claim cycle time, regional loss patterns, and estimated loss ratio where premium data is available or synthetically generated.
 
 This project is intentionally built as a learning-focused but realistic system. It is not meant to copy any specific company's internal architecture. Instead, it uses insurance as the business context while practicing data engineering patterns that apply across many industries, including finance, healthcare, retail, logistics, and SaaS.
 
