@@ -252,3 +252,11 @@ Ported PySpark fact_claims v1 to dbt. Three proofs of migration correctness:
 
 **3. Sliced analytical parity:** hurricane × state × year queries return industry-realistic numbers on both sides (Katrina LA $13B, Harvey TX $9B, Sandy NJ+NY $4.4B combined, Ian FL $5B). Small variance (<3%) traces to documented geography orphan handling.
 
+
+## 2026-07-14 — dbt docs generated; lineage graph added to README
+
+`dbt docs generate` produces a browsable web UI showing the full model dependency graph and per-model documentation (columns, tests, description). Lineage graph screenshot committed at `docs/dbt_lineage.png` and embedded in README.
+
+The lineage image is one of the strongest visible artifacts of the project — instantly shows dimensional modeling depth: sources → staging → marts, with SCD2 dims flowing from PySpark ownership into dbt-consumed sources.
+
+Local viewing: `dbt docs serve` in the project directory serves at http://localhost:8080.
