@@ -309,8 +309,4 @@ airflow_docker/config/
 airflow_docker/.env
 airflow_docker/plugins/
 
-# Airflow Docker local state (never commit)
-airflow_docker/logs/
-airflow_docker/config/
-airflow_docker/.env
-airflow_docker/plugins/
+
