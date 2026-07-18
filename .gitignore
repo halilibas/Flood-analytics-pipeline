@@ -281,6 +281,9 @@ great_expectations/uncommitted/
 # Streamlit
 .streamlit/secrets.toml
 
+# Personal notes (kept local, never pushed)
+local_retros/
+
 # IDE / editor
 .vscode/
 .idea/
@@ -298,3 +301,16 @@ logs/
 .AppleDouble
 .LSOverride
 venv/
+venv_airflow/
+
+# Airflow Docker local state
+airflow_docker/logs/
+airflow_docker/config/
+airflow_docker/.env
+airflow_docker/plugins/
+
+# Airflow Docker local state (never commit)
+airflow_docker/logs/
+airflow_docker/config/
+airflow_docker/.env
+airflow_docker/plugins/
