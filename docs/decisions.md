@@ -260,3 +260,18 @@ Ported PySpark fact_claims v1 to dbt. Three proofs of migration correctness:
 The lineage image is one of the strongest visible artifacts of the project — instantly shows dimensional modeling depth: sources → staging → marts, with SCD2 dims flowing from PySpark ownership into dbt-consumed sources.
 
 Local viewing: `dbt docs serve` in the project directory serves at http://localhost:8080.
+
+## 2026-07-19 — dbt-in-Airflow via DockerOperator (tool isolation)
+
+**Context:** Aimed to run dbt from inside the Airflow worker via BashOperator + `_PIP_ADDITIONAL_REQUIREMENTS`. All version pairs of `apache-airflow-providers-databricks` and `dbt-databricks` conflict on `databricks-sql-connector`. Not solvable in one container.
+
+**Decision:** run dbt in its own container via DockerOperator. Airflow worker no longer needs dbt-databricks installed. Each tool has its own isolated dependency graph.
+
+**Architecture:**
+- Custom image `dbt-flood-analytics:1.12.2` built from `python:3.11-slim + dbt-databricks==1.12.2`
+- Airflow worker gets Docker socket mount (`/var/run/docker.sock`)
+- Airflow worker gets `apache-airflow-providers-docker` installed
+- DockerOperator spins up ephemeral dbt containers per task
+- Both dbt project source and profiles.yml bind-mounted from host into dbt container
+- Container auto-removes on success
+
