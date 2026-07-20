@@ -310,3 +310,5 @@ airflow_docker/.env
 airflow_docker/plugins/
 
 
+# dbt profiles for Airflow container 
+home_dbt/profiles.yml
