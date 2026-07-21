@@ -17,6 +17,7 @@ for target, source in SOURCES.items():
     print(f"\n{target}: read {df.count():,} rows from {source}")
     (
         df.write
+        .mode("overwrite")  
         .format("delta")
         .option("overwriteSchema", "true")
         .saveAsTable(target)
