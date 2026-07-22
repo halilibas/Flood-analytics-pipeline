@@ -275,3 +275,22 @@ Local viewing: `dbt docs serve` in the project directory serves at http://localh
 - Both dbt project source and profiles.yml bind-mounted from host into dbt container
 - Container auto-removes on success
 
+## 2026-07-21 — Canonical end-to-end DAG: medallion_full_refresh
+
+**Context:** Built three separate DAGs demonstrating orchestration patterns. Today unifies the meaningful two (dbt_refresh + pyspark_bronze_silver) into a canonical end-to-end DAG.
+
+**Decision:** created medallion_full_refresh.py with 9 tasks in one workflow. Kept sub-DAGs alongside for tactical use.
+
+**Task shape:**
+- Bronze: 3 tasks (fema, synthetic, reference_tables) — parallelizable in definition
+- Silver: 4 tasks chained per source, converging at enrich → synthesize
+- Gold: dbt_run → dbt_test via DockerOperator
+- Total: 9 tasks
+
+**Orchestration patterns united:**
+- DatabricksSubmitRunOperator with Serverless multi-task API for 7 PySpark notebook tasks
+- DockerOperator for 2 dbt tasks in isolated container (dependency conflict avoidance)
+
+
+**End-to-end run:** ~11 min wall time (Serverless warm), all 9 tasks succeed, gold_dbt.fact_claims populated with 2,721,780 rows validated by 64+ dbt tests.
+
