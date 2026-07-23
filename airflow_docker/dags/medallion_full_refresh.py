@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-
+import logging
 from airflow import DAG
 from airflow.providers.databricks.operators.databricks import (
     DatabricksSubmitRunOperator,
@@ -7,7 +7,7 @@ from airflow.providers.databricks.operators.databricks import (
 from airflow.providers.docker.operators.docker import DockerOperator
 from docker.types import Mount
 
-
+logger = logging.getLogger(__name__)
 
 # configuration
 
@@ -22,6 +22,35 @@ HOST_PROJECT_DIR = "/Users/halil/Desktop/insurance_claim/claims-policy-analytics
 HOST_DBT_PROJECT = f"{HOST_PROJECT_DIR}/dbt/flood_analytics"
 HOST_DBT_PROFILES = f"{HOST_PROJECT_DIR}/home_dbt"
 
+def task_failure_alert(context: dict) -> None:
+    """
+    Failure callback - logs structured failure info in Slack/webhook ready shape
+    """
+    task_instance = context["task_instance"]
+    dag_run = context["dag_run"]
+    exception = context.get("exception", "unknown")
+    
+    payload = {
+        "dag_id": task_instance.dag_id,
+        "task_id": task_instance.task_id,
+        "run_id": dag_run.run_id,
+        "try_number": task_instance.try_number,
+        "max_tries": task_instance.max_tries,
+        "log_url": task_instance.log_url,
+        "exception": str(exception),
+        "execution_date": str(context.get("execution_date")),
+    }
+    
+    logger.error(
+        "PIPELINE TASK FAILURE",
+        extra={"failure_payload": payload},
+    )
+    
+    logger.error(
+        f"[ALERT] {task_instance.dag_id}.{task_instance.task_id} failed "
+        f"(try {task_instance.try_number}/{task_instance.max_tries}). "
+        f"Log: {task_instance.log_url}"
+    )
 
 default_args = {
     "owner": "halil",
@@ -30,6 +59,7 @@ default_args = {
     "email_on_retry": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
+    "on_failure_callback": task_failure_alert,
 }
 
 # task
@@ -43,6 +73,9 @@ def databricks_notebook_task(
     return DatabricksSubmitRunOperator(
         task_id=task_id,
         databricks_conn_id="databricks_default",
+        retries=2,
+        retry_delay=timedelta(minutes=3),
+        execution_timeout=timedelta(minutes=15),
         tasks=[
             {
                 "task_key": task_id,
@@ -65,6 +98,9 @@ def dbt_task(task_id: str, command: str) -> DockerOperator:
         task_id=task_id,
         image=DBT_IMAGE,
         command=command,
+        retries=1,
+        retry_delay=timedelta(minutes=1),
+        execution_timeout=timedelta(minutes=10),
         mounts=[
             Mount(source=HOST_DBT_PROJECT, target="/usr/app/dbt", type="bind"),
             Mount(source=HOST_DBT_PROFILES, target="/root/.dbt", type="bind"),
@@ -90,6 +126,7 @@ with DAG(
     catchup=False,
     tags=["flood_analytics", "medallion", "canonical"],
     max_active_tasks=1,
+    dagrun_timeout=timedelta(minutes=45)
 ) as dag:
     
     # bronze layer
