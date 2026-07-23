@@ -294,3 +294,19 @@ Local viewing: `dbt docs serve` in the project directory serves at http://localh
 
 **End-to-end run:** ~11 min wall time (Serverless warm), all 9 tasks succeed, gold_dbt.fact_claims populated with 2,721,780 rows validated by 64+ dbt tests.
 
+## 2026-07-22 — DAG polish
+
+**Context:** Added the operational features that separate demo DAGs from production DAGs.
+
+**Additions:**
+
+1. **`on_failure_callback`** — task_failure_alert() logs structured failure payload including dag_id, task_id, try_number, log_url, exception. Format is Slack-webhook-ready. In production, replace logger.error() with requests.post() to Slack Incoming Webhook.
+
+2. **Per-layer retry policy:**
+   - Bronze/silver tasks: retries=2, retry_delay=3min. Accommodates Serverless cold-start and rate-limit transients.
+   - dbt tasks: retries=1, retry_delay=1min. dbt failures are usually deterministic (bad SQL or test failure).
+
+3. **execution_timeout** per task (15 min bronze/silver, 10 min dbt). Prevents runaway tasks.
+
+4. **dagrun_timeout** at DAG level (45 min). Hard cutoff for entire pipeline.
+
