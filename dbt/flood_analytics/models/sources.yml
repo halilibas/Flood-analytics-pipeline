@@ -42,6 +42,9 @@ sources:
     tables:
       - name: dim_policy
         description: "SCD2 policy dimension. Grain: one row per policy_number+version. 2.72M v1 rows + 1 simulated v2."
+        tests:
+          - scd2_one_current_per_natural_key:
+              natural_key_column: policy_number
         columns:
           - name: policy_key
             description: "Surrogate PK via xxhash64(policy_number, policy_version)"
@@ -63,6 +66,9 @@ sources:
 
       - name: dim_customer
         description: "SCD2 customer dimension. Grain: one row per customer_id+version. 2.72M v1 + 1 simulated v2."
+        tests:
+          - scd2_one_current_per_natural_key:
+              natural_key_column: customer_id
         columns:
           - name: customer_key
             description: "Surrogate PK via xxhash64(customer_id, customer_version)"
