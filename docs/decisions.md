@@ -310,3 +310,32 @@ Local viewing: `dbt docs serve` in the project directory serves at http://localh
 
 4. **dagrun_timeout** at DAG level (45 min). Hard cutoff for entire pipeline.
 
+
+## 2026-08-18 — Data quality: cross-source integrity + cross-layer reconciliation
+
+**Two additional non-trivial tests, each catching a different failure mode:**
+
+### Test #1: bridge_integrity_policies_to_claims (severity: error)
+
+Verifies the 1:1 mapping between stg_policies.fema_claim_id and stg_claims.fema_claim_id. Flags both orphan policies (fema_claim_id not in claims) and orphan claims (id not in policies).
+
+**Would catch:** Generator drift bugs (uuid4 seeding issues, off-by-one in join keys), any future modification to bronze layer that misaligns claim IDs.
+
+### Test #2: layer_reconciliation_row_count (severity: error)
+
+Verifies that bronze.fema_claims_raw, silver.claims_clean, and gold_dbt.fact_claims all contain the same number of rows (2,721,780). Any layer with a divergent count fails the test.
+
+**Would catch:** silver rebuilt without synthesize — silver would have had the same row count as bronze but the dbt materialization of gold would show the wrong count downstream. Also catches partial DAG runs, failed writes that didn't fully commit, and any scenario where the medallion layers have drifted apart.
+
+## 2026-08-18 — Data quality layer complete: 5 test categories demonstrated
+
+the dbt test suite demonstrates 5 quality thinking patterns:
+
+1. **Structural tests** (built-in generic tests) — unique, not_null, relationships, accepted_values
+2. **Custom generic tests** (SQL macros) — scd2_one_current_per_natural_key
+3. **Business rule tests** — coverage_cap_not_exceeded
+4. **Cross-source referential integrity** — bridge_integrity_policies_to_claims
+5. **Cross-layer reconciliation** — layer_reconciliation_row_count
+
+**Test count:** ~68 total 
+
