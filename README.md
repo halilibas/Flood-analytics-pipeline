@@ -1,6 +1,6 @@
 # Flood Claims Analytics Pipeline
 
-> Work in progress - May 2026 - Present
+> Complete: May 2026 - Aug 2026
 
 An end-to-end data engineering project using FEMA NFIP flood claims data and synthetic policy, customer, and agent data.
 
@@ -102,7 +102,7 @@ airflow_docker/
 
 ## Stack
 
-Current / planned stack:
+Current stack:
 
 - **Compute / storage:** Databricks, Delta Lake
 - **Transformation:** PySpark, dbt
