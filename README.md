@@ -8,9 +8,9 @@ The goal is to build a small but realistic flood analytics pipeline: ingest raw 
 
 
 
-## What's Working 
+## Pipeline Overview
 
-End-to-end pipeline: FEMA NFIP raw → Bronze Delta → Silver typed/cleaned → Gold star schema → Streamlit dashboard.
+End-to-end pipeline: FEMA NFIP raw → Bronze (Delta) → Silver (typed/cleaned) → Gold (dbt marts + PySpark-managed SCD2) → Streamlit dashboard. All layers tested via dbt assertions, orchestrated end-to-end via Airflow.
 
 ![Dashboard](docs/dashboard_screenshot.png)
 ![Cycle time distribution](docs/dashboard_screenshot_histogram.png)
