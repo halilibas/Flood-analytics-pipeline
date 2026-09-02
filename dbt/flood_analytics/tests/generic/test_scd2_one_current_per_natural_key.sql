@@ -2,10 +2,10 @@
   Custom generic test: verifies SCD2 invariant.
   
   For a given SCD2 dimension, asserts that each natural key
-  has exactly one row where is_current = true
+  has exactly one row where is_current = true.
   
   Args:
-    model: the dbt model or source (auto passed by dbt)
+    model: the dbt model or source (auto-passed by dbt)
     natural_key_column: the natural key column name
   
   Usage in schema.yml:
@@ -23,9 +23,8 @@
 with current_row_counts as (
     select
         {{ natural_key_column }} as natural_key,
-        count(*) as n_current_rows
+        sum(case when is_current = true then 1 else 0 end) as n_current_rows
     from {{ model }}
-    where is_current = true
     group by {{ natural_key_column }}
 ),
 

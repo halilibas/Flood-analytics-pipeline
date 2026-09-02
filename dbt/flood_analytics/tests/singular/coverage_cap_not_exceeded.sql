@@ -9,7 +9,7 @@
   read directly from fact_claims (NOT from a point-in-time join to
   synthetic dim_policy — those come from a different source).
   
-  Known counts (as of 2026-08-XX, at 2,721,780 fact_claims rows):
+  Known counts  (at 2,721,780 fact_claims rows):
     - Strict  (threshold 1.00): 9,292 claims (0.341% of total)
     - Moderate (threshold 1.05): 8,369 claims (0.307% of total)
     - Current  (threshold 1.10): 5,743 claims (0.211% of total)
