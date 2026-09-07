@@ -63,7 +63,7 @@ End-to-end pipeline orchestrated via Apache Airflow running in Docker.
 
 ![medallion_full_refresh DAG](docs/medallion_full_refresh.png)
 
-**Canonical DAG:** `medallion_full_refresh` — 9 tasks from raw ingest through validated gold tables.
+**Canonical DAG:** `medallion_full_refresh` — 11 tasks from raw ingest through validated gold tables.
 
 - **Bronze layer (3 tasks):** FEMA claims, synthetic policies/customers/agents, reference tables
 - **Silver layer (4 tasks):** Clean FEMA, clean synthetic, enrich claims, synthesize lifecycle dates
