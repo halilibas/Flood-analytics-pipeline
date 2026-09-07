@@ -60,7 +60,8 @@ dim_customer_initial = (
     )
 
     # SCD2 mechanics
-    .withColumn("effective_date", F.lit(EFFECTIVE_NOW).cast(DateType()))
+    # SCD2 mechanics
+    .withColumn("effective_date", F.lit(date(1900, 1, 1)).cast(DateType()))
     .withColumn("expiration_date", F.lit(None).cast(DateType()))
     .withColumn("is_current", F.lit(True).cast(BooleanType()))
 
@@ -117,7 +118,7 @@ print("Initial load uniqueness verified")
     .saveAsTable(TARGET_TABLE)
 )
 
-print("Wrote {TARGET_TABLE} {initial_load}")
+print(f"Wrote {TARGET_TABLE} (initial load)")
 
 spark.sql(f"SELECT COUNT(*) AS n, SUM(CAST(is_current AS INT)) AS n_current FROM {TARGET_TABLE}").display()
 
@@ -224,145 +225,27 @@ print(f"Closed rows: {post_merge_count - post_merge_current}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Simulated address change (demonstrate SCD2 woks)
+# MAGIC ### Verify idempotency invariants
 
 # COMMAND ----------
 
-#pick a customer, simulate address_state change from their current to CA
-target = spark.sql(f"""
-    SELECT customer_id, address_state, customer_full_name
-    FROM {TARGET_TABLE}
-    WHERE is_current = TRUE
-    LIMIT 1
-""").collect()[0]
+n_rows = spark.table(TARGET_TABLE).count()
+n_distinct_keys = spark.sql(
+    f"SELECT COUNT(DISTINCT customer_key) AS n FROM {TARGET_TABLE}"
+).collect()[0]["n"]
 
-target_customer_id = target.customer_id
-old_state = target.address_state
-new_state = "WY" if old_state == "CA" else "CA"
-
-print(f"Target customer: {target_customer_id}")
-print(f"  Name: {target.customer_full_name}")
-print(f"  Address state: {old_state} → {new_state}")
-
-# Build incoming
-incoming = spark.sql(f"""
-    SELECT
-        customer_id, first_name, last_name,
-        dob, email, phone,
-        address_line_1,
-        '{new_state}' AS address_state,
-        occupation
-    FROM {SOURCE_TABLE}
-    WHERE customer_id = '{target_customer_id}'
-""")
-
-incoming.createOrReplaceTempView("incoming_customer_change")
-incoming.show(truncate=False)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Run MERGE with simulated change
-
-# COMMAND ----------
-
-# Step 1 with simulated source
-merge_1_sim = f"""
-MERGE INTO {TARGET_TABLE} AS d
-USING incoming_customer_change AS s
-ON  d.customer_id = s.customer_id
-    AND d.is_current = TRUE
-    AND (1=1)
-WHEN MATCHED THEN UPDATE SET
-    d.expiration_date = DATE('{EFFECTIVE_NOW}'),
-    d.is_current = FALSE
-"""
-
-print("=== Simulated change — Step 1 ===")
-spark.sql(merge_1_sim).display()
-
-# Step 2 with simulated source
-merge_2_sim = f"""
-MERGE INTO {TARGET_TABLE} AS d
-USING (
-    WITH max_version AS (
-        SELECT customer_id, COALESCE(MAX(customer_version), 0) AS prev_version
-        FROM {TARGET_TABLE}
-        GROUP BY customer_id
-    )
-    SELECT
-        s.customer_id,
-        s.first_name, s.last_name,
-        s.dob, s.email, s.phone,
-        s.address_line_1, s.address_state,
-        s.occupation,
-        COALESCE(mv.prev_version, 0) + 1 AS new_version
-    FROM incoming_customer_change s
-    LEFT JOIN max_version mv ON s.customer_id = mv.customer_id
-    WHERE NOT EXISTS (
-        SELECT 1 FROM {TARGET_TABLE} d2
-        WHERE d2.customer_id = s.customer_id
-          AND d2.is_current = TRUE
-    )
-) AS src
-ON FALSE
-WHEN NOT MATCHED THEN INSERT (
-    customer_key, customer_id, customer_version,
-    first_name, last_name, customer_full_name,
-    dob, email, phone,
-    address_line_1, address_state,
-    occupation,
-    effective_date, expiration_date, is_current,
-    _dim_built_at, _dim_pipeline_run_id
-) VALUES (
-    XXHASH64(src.customer_id, CAST(src.new_version AS STRING)),
-    src.customer_id, src.new_version,
-    src.first_name, src.last_name, CONCAT_WS(' ', src.first_name, src.last_name),
-    src.dob, src.email, src.phone,
-    src.address_line_1, src.address_state,
-    src.occupation,
-    DATE('{EFFECTIVE_NOW}'), NULL, TRUE,
-    TIMESTAMP('{INGESTED_AT.isoformat()}'), '{PIPELINE_RUN_ID}'
-)
-"""
-
-print("Simulated change — Step 2 ")
-spark.sql(merge_2_sim).display()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Verify the SCD2 outcome
-
-# COMMAND ----------
-
-# show both versions for target customer
-spark.sql(f"""
-    SELECT customer_key, customer_id, customer_version,
-           address_state, effective_date, expiration_date, is_current
-    FROM {TARGET_TABLE}
-    WHERE customer_id = '{target_customer_id}'
-    ORDER BY customer_version
-""").display()
-
-# global invariants
-new_total = spark.table(TARGET_TABLE).count()
-print(f"Total rows: {new_total:,}  (expected 2,721,781)")
-
-multiple_current = spark.sql(f"""
-    SELECT customer_id, COUNT(*) AS n
+n_multi_current = spark.sql(f"""
+    SELECT customer_id
     FROM {TARGET_TABLE}
     WHERE is_current = TRUE
     GROUP BY customer_id
     HAVING COUNT(*) > 1
 """).count()
-print(f"Customers with >1 current row: {multiple_current}  (must be 0)")
 
-#global surrogate key uniqueness
-n_distinct = spark.sql(f"SELECT COUNT(DISTINCT customer_key) AS n FROM {TARGET_TABLE}").collect()[0]["n"]
-print(f"Distinct customer_key: {n_distinct:,}  (should equal {new_total:,})")
+print(f"Rows:                {n_rows:,}")
+print(f"Distinct customer_key: {n_distinct_keys:,}")
+print(f"Customers >1 current: {n_multi_current}")
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### 
+assert n_rows == n_distinct_keys, "customer_key collision"
+assert n_multi_current == 0, "SCD2 violation: multiple current rows per customer_id"
+print("dim_customer invariants verified")
