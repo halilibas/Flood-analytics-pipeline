@@ -46,12 +46,16 @@ dim_policy_initial = (
         F.col("coverage_type"),
         F.col("effective_date"),                          
     )
-    # surrogate key
-    .withColumn("policy_key", F.monotonically_increasing_id())
     # SCD2 mechanics
+    .withColumn("policy_version", F.lit(1))
     .withColumn("expiration_date", F.lit(None).cast(DateType()))
     .withColumn("is_current", F.lit(True).cast(BooleanType()))
-    .withColumn("policy_version", F.lit(1))
+    # Surrogate key — deterministic hash so reruns produce identical keys.
+    # monotonically_increasing_id() is only unique within a single query execution.
+    .withColumn(
+    "policy_key",
+    F.xxhash64(F.col("policy_number"), F.col("policy_version").cast("string"))
+    )
     # audit
     .withColumn("_dim_built_at", F.lit(INGESTED_AT).cast("timestamp"))
     .withColumn("_dim_pipeline_run_id", F.lit(PIPELINE_RUN_ID))
@@ -257,7 +261,7 @@ WHEN NOT MATCHED THEN INSERT (
     effective_date, expiration_date, is_current,
     _dim_built_at, _dim_pipeline_run_id
 ) VALUES (
-    MONOTONICALLY_INCREASING_ID(),
+    XXHASH64(src.policy_number, CAST(src.new_version AS STRING)),
     src.policy_number, src.new_version,
     src.customer_id, src.agent_id,
     src.building_coverage, src.contents_coverage, src.deductible_amount,
@@ -291,179 +295,27 @@ print(f"Closed rows:       {post_merge_count - post_merge_current:,}  (expected 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Simulate a Policy Change In Silver
+# MAGIC ### Verify idempotency invariants
 
 # COMMAND ----------
 
-# Pick one policy_number; bump its annual_premium and re-merge
+n_rows = spark.table(TARGET_TABLE).count()
+n_distinct_keys = spark.sql(
+    f"SELECT COUNT(DISTINCT policy_key) AS n FROM {TARGET_TABLE}"
+).collect()[0]["n"]
 
-target_policy = spark.sql(f"""
-    SELECT policy_number, annual_premium, building_coverage
-    FROM {TARGET_TABLE}
-    WHERE is_current = TRUE
-    LIMIT 1
-""").collect()[0]
-
-target_policy_number = target_policy.policy_number
-old_premium = target_policy.annual_premium
-
-print(f"Target policy: {target_policy_number}")
-print(f"  Current premium:  ${old_premium}")
-print(f"  Current coverage: ${target_policy.building_coverage}")
-
-
-NEW_PREMIUM = float(old_premium) * 1.10  
-
-
-incoming = spark.sql(f"""
-    SELECT
-        policy_number, customer_id, agent_id,
-        building_coverage, contents_coverage, deductible_amount,
-        CAST({NEW_PREMIUM:.2f} AS DECIMAL(10, 2)) AS annual_premium,
-        coverage_type,
-        effective_date
-    FROM {SOURCE_TABLE}
-    WHERE policy_number = '{target_policy_number}'
-""")
-
-incoming.createOrReplaceTempView("incoming_silver_change")
-incoming.show(truncate=False)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Run the MERGE Steps with the simulated change
-
-# COMMAND ----------
-
-merge_step_1_sim = f"""
-MERGE INTO {TARGET_TABLE} AS d
-USING incoming_silver_change AS s
-ON  d.policy_number = s.policy_number
-    AND d.is_current = TRUE
-    AND ({changed_condition})
-WHEN MATCHED THEN UPDATE SET
-    d.expiration_date = DATE('{EFFECTIVE_NOW}'),
-    d.is_current = FALSE
-"""
-
-print("=== Simulated change — Step 1: close old version ===")
-spark.sql(merge_step_1_sim).display()
-
-merge_step_2_sim = f"""
-MERGE INTO {TARGET_TABLE} AS d
-USING (
-    WITH max_version AS (
-        SELECT policy_number, COALESCE(MAX(policy_version), 0) AS prev_version
-        FROM {TARGET_TABLE}
-        GROUP BY policy_number
-    )
-    SELECT
-        s.policy_number,
-        s.customer_id, s.agent_id,
-        s.building_coverage, s.contents_coverage, s.deductible_amount,
-        s.annual_premium, s.coverage_type,
-        s.effective_date AS silver_effective_date,
-        COALESCE(mv.prev_version, 0) + 1 AS new_version
-    FROM incoming_silver_change s
-    LEFT JOIN max_version mv ON s.policy_number = mv.policy_number
-    WHERE NOT EXISTS (
-        SELECT 1 FROM {TARGET_TABLE} d2
-        WHERE d2.policy_number = s.policy_number
-          AND d2.is_current = TRUE
-    )
-) AS src
-ON FALSE
-WHEN NOT MATCHED THEN INSERT (
-    policy_key,
-    policy_number, policy_version,
-    customer_id, agent_id,
-    building_coverage, contents_coverage, deductible_amount,
-    annual_premium, coverage_type,
-    effective_date, expiration_date, is_current,
-    _dim_built_at, _dim_pipeline_run_id
-) VALUES (
-    MONOTONICALLY_INCREASING_ID(),
-    src.policy_number, src.new_version,
-    src.customer_id, src.agent_id,
-    src.building_coverage, src.contents_coverage, src.deductible_amount,
-    src.annual_premium, src.coverage_type,
-    DATE('{EFFECTIVE_NOW}'), NULL, TRUE,
-    TIMESTAMP('{INGESTED_AT.isoformat()}'), '{PIPELINE_RUN_ID}'
-)
-"""
-
-print("=== Simulated change — Step 2: insert new version ===")
-spark.sql(merge_step_2_sim).display()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Verify the SCD2 outcome
-
-# COMMAND ----------
-
-# Now query the target policy should see two rows: v1 closed, v2 current
-spark.sql(f"""
-    SELECT
-        policy_key, policy_number, policy_version,
-        annual_premium, building_coverage,
-        effective_date, expiration_date, is_current
-    FROM {TARGET_TABLE}
-    WHERE policy_number = '{target_policy_number}'
-    ORDER BY policy_version
-""").display()
-
-
-new_total = spark.table(TARGET_TABLE).count()
-print(f"Total rows after change:  {new_total:,}  (expected {2_721_780 + 1:,})")
-
-
-multiple_current_check = spark.sql(f"""
-    SELECT policy_number, COUNT(*) AS current_count
+n_multi_current = spark.sql(f"""
+    SELECT policy_number
     FROM {TARGET_TABLE}
     WHERE is_current = TRUE
     GROUP BY policy_number
     HAVING COUNT(*) > 1
 """).count()
-print(f"Policies with >1 current row: {multiple_current_check}  (must be 0)")
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Fix Surrogate Key Collision
-
-# COMMAND ----------
-
-from pyspark.sql import functions as F
-
-dim_repaired = (
-    spark.table(TARGET_TABLE)
-    .withColumn(
-        "policy_key",
-        F.xxhash64(F.col("policy_number"), F.col("policy_version").cast("string"))
-    )
-)
-
-(
-    dim_repaired.write
-    .format("delta")
-    .mode("overwrite")
-    .option("overwriteSchema", "true")
-    .saveAsTable(TARGET_TABLE)
-)
-
-
-spark.sql(f"""
-    SELECT policy_key, policy_number, policy_version, is_current
-    FROM {TARGET_TABLE}
-    WHERE policy_number = '{target_policy_number}'
-    ORDER BY policy_version
-""").display()
-
-n_rows = spark.table(TARGET_TABLE).count()
-n_distinct_keys = spark.sql(f"SELECT COUNT(DISTINCT policy_key) AS n FROM {TARGET_TABLE}").collect()[0]["n"]
-print(f"Rows: {n_rows:,}")
+print(f"Rows:                {n_rows:,}")
 print(f"Distinct policy_key: {n_distinct_keys:,}")
-assert n_rows == n_distinct_keys, "policy_key still colliding"
-print("policy_key now unique per version")
+print(f"Policies >1 current: {n_multi_current}")
+
+assert n_rows == n_distinct_keys, "policy_key collision"
+assert n_multi_current == 0, "SCD2 violation: multiple current rows per policy_number"
+print("dim_policy invariants verified")
