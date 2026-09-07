@@ -118,8 +118,8 @@ with DAG(
     default_args=default_args,
     description=(
         "End-to-end Flood Analytics pipeline: Bronze ingest → Silver clean/enrich "
-        "→ dbt materialize gold tables → dbt test. Two orchestration patterns "
-        "united (DatabricksSubmitRunOperator + DockerOperator)."
+        "→ PySpark SCD2 gold dims → dbt materialize gold marts → dbt test. Two "
+        "orchestration patterns united (DatabricksSubmitRunOperator + DockerOperator)."     
     ),
     schedule=None,   
     start_date=datetime(2026, 7, 21),
@@ -167,6 +167,20 @@ with DAG(
         notebook_subpath="silver/04_synthesize_lifecycle_dates",
     )
     
+    # gold layer — PySpark-managed SCD2 dimensions
+    # dbt consumes these as sources (gold.dim_policy, gold.dim_customer) and
+    # cannot build them itself, so they must materialize before dbt_run.
+
+    gold_dim_policy = databricks_notebook_task(
+        task_id="gold_build_dim_policy_scd2",
+        notebook_subpath="gold/04_build_dim_policy_scd2",
+    )
+
+    gold_dim_customer = databricks_notebook_task(
+        task_id="gold_build_dim_customer_scd2",
+        notebook_subpath="gold/05_build_dim_customer_scd2",
+    )
+    
     # gold layer via dbt
     
     dbt_run = dbt_task(
@@ -180,7 +194,7 @@ with DAG(
     )
     
     # dependencies
-    
+
     # bronze pairs to cleaned silver
     bronze_fema >> silver_clean_fema
     bronze_synthetic >> silver_clean_synthetic
@@ -191,6 +205,10 @@ with DAG(
     # silver chain completes with synthesize_dates
     silver_enrich >> silver_synthesize_dates
 
-    # gold: dbt runs after all silver is complete
-    silver_synthesize_dates >> dbt_run >> dbt_test
+    # SCD2 dims build off cleaned synthetic policies/customers
+    silver_clean_synthetic >> gold_dim_policy
+    silver_clean_synthetic >> gold_dim_customer
+
+    # dbt needs the full silver chain AND both SCD2 source dims
+    [silver_synthesize_dates, gold_dim_policy, gold_dim_customer] >> dbt_run >> dbt_test
     
