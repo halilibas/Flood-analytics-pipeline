@@ -63,7 +63,7 @@ df_customers_silver = (
     df_customers
     .withColumn("dob", F.col("dob").cast(DateType()))
     .withColumn("_silver_ingested_at", F.lit(INGESTED_AT).cast("timestamp"))
-    .withColumn("_silver_pipeline_run_id", F.lit("PIPELINE_RUN_ID"))
+    .withColumn("_silver_pipeline_run_id", F.lit(PIPELINE_RUN_ID))
 )
 
 (
@@ -95,7 +95,7 @@ df_policies_silver = (
     df_policies
     .withColumn("building_coverage", F.col("building_coverage").cast(DecimalType(18, 2)))
     .withColumn("contents_coverage", F.col("contents_coverage").cast(DecimalType(18, 2)))
-    .withColumn("deductiable_amount", F.col("deductible_amount").cast(DecimalType(18,2)))
+    .withColumn("deductible_amount", F.col("deductible_amount").cast(DecimalType(18,2)))
     .withColumn("annual_premium", F.col("annual_premium").cast(DecimalType(18,2)))
 )
 
@@ -107,7 +107,7 @@ df_policies_silver = (
     .saveAsTable("silver.policies_clean")
 )
 
-print(f"Wrote silver.policies.clean ({df_policies_silver.count():,} rows)")
+print(f"Wrote silver.policies_clean ({df_policies_silver.count():,} rows)")
 
 # COMMAND ----------
 
