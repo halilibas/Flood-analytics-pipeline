@@ -1,0 +1,16 @@
+# Databricks injects these into the notebook runtime, so they are never
+# imported or assigned in notebooks/ and would otherwise read as undefined.
+builtins = ["spark", "dbutils", "display", "displayHTML", "sc", "sqlContext"]
+
+extend-exclude = [
+    "venv",
+    "venv_airflow",
+    "dbt/flood_analytics/target",
+]
+
+[lint]
+# Fail the build only on genuine defects: syntax errors, undefined names,
+# broken f-strings, and comparisons/assertions that cannot do what they look
+# like they do. Formatting and import order are deliberately not enforced —
+# a style-only failure on a portfolio repo is noise, not signal.
+select = ["E9", "F63", "F7", "F82"]

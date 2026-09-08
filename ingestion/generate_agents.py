@@ -3,7 +3,7 @@ Generate a small syntethic agent pool
 """
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+from uuid import NAMESPACE_DNS, uuid4, uuid5
 import random
 
 import pandas as pd
@@ -11,6 +11,7 @@ from faker import Faker
 
 NUM_AGENTS = 75
 SEED = 42
+AGENT_NAMESPACE = uuid5(NAMESPACE_DNS, "flood-analytics.agents")
 OUTPUT_PATH = Path("/Users/halil/Desktop/data/synthetic/agents.parquet").expanduser()
 PIPELINE_RUN_ID = str(uuid4())
 INGESTED_AT = datetime.now(timezone.utc)
@@ -26,10 +27,10 @@ state_pool = (
     + ["VA"] * 3 + ["MA"] * 2 + ["IL"] * 2 + ["MO"] * 2 + ["CA"] * 2
 )
 
-def generate_agent():
+def generate_agent(idx):
     state = random.choice(state_pool)
     return {
-        "agent_id": str(uuid4()),
+        "agent_id": str(uuid5(AGENT_NAMESPACE, f"agent-{idx:04d}")),
         "first_name": fake.first_name(),
         "last_name": fake.last_name(),
         "agency_name": f"{fake.last_name()} & {fake.last_name()} Insurance",
@@ -41,7 +42,7 @@ def generate_agent():
     }
 
 def main():
-    agents = [generate_agent() for _ in range(NUM_AGENTS)]
+    agents = [generate_agent(i) for i in range(NUM_AGENTS)]
     df = pd.DataFrame(agents)
     df["_ingested_at"] = INGESTED_AT
     df["_source_file"] = "faker:agents"

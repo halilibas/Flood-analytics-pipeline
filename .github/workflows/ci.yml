@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same ref supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff==0.16.6
+
+      # Ruleset and Databricks runtime globals are configured in ruff.toml.
+      - name: Check for defects
+        run: ruff check --output-format=github .
+
+  test:
+    name: Data quality tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The suite runs Spark in local[2] mode, so it needs a JVM.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install pyspark==3.5.0 -r requirements-dev.txt
+
+      - name: Run pytest
+        run: pytest tests/ -v
+
+  dbt:
+    name: dbt parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: pip install dbt-core==1.11.12 dbt-databricks==1.12.2
+
+      # dbt requires a profile to exist, but `parse` never opens a connection,
+      # so placeholder credentials are enough and no secret is needed here.
+      - name: Write placeholder profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<'PROFILE'
+          flood_analytics:
+            outputs:
+              dev:
+                type: databricks
+                catalog: workspace
+                schema: gold_dbt
+                host: example.cloud.databricks.com
+                http_path: /sql/1.0/warehouses/placeholder
+                token: placeholder-parse-only
+                threads: 4
+            target: dev
+          PROFILE
+
+      # Validates that every model, source, ref, and test resolves — catches
+      # broken lineage and malformed schema YAML without touching Databricks.
+      - name: Parse dbt project
+        run: dbt parse --project-dir dbt/flood_analytics

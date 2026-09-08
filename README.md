@@ -6,7 +6,7 @@ An end-to-end data engineering project using FEMA NFIP flood claims data and syn
 
 The goal is to build a small but realistic flood analytics pipeline: ingest raw claims data, clean and standardize it through bronze and silver layers, model business-ready tables in a gold layer, and surface claims KPIs in a Streamlit dashboard.
 
-
+[![CI](https://github.com/halilibas/claims-policy-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/halilibas/claims-policy-analytics-pipeline/actions/workflows/ci.yml)
 
 ## Pipeline Overview
 
@@ -71,7 +71,7 @@ End-to-end pipeline orchestrated via Apache Airflow running in Docker.
 
 **Two orchestration patterns united:**
 
-- `DatabricksSubmitRunOperator` (7 tasks) — PySpark notebooks executed on Databricks Serverless via multi-task Jobs API
+- `DatabricksSubmitRunOperator` (9 tasks) — PySpark notebooks executed on Databricks Serverless via multi-task Jobs API
 - `DockerOperator` (2 tasks) — dbt run and test in an isolated container to avoid dependency conflict between `dbt-databricks` and `apache-airflow-providers-databricks`
 
 **Production realism features:**
