@@ -28,12 +28,9 @@ from docker.types import Mount
 
 # Configuration
 
-DBT_IMAGE = "dbt-flood-analytics:1.12.2"
+from pipeline_config import HOST_DBT_PROFILES, HOST_DBT_PROJECT
 
-# host paths ,DockerOperator needs these to bind-mount into the dbt container
-HOST_PROJECT_DIR = "/Users/halil/Desktop/insurance_claim/claims-policy-analytics-pipeline"
-HOST_DBT_PROJECT = f"{HOST_PROJECT_DIR}/dbt/flood_analytics"
-HOST_DBT_PROFILES = f"{HOST_PROJECT_DIR}/home_dbt"
+DBT_IMAGE = "dbt-flood-analytics:1.12.2"
 
 
 default_args = {

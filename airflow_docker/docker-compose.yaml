@@ -53,6 +53,8 @@ x-airflow-common:
   # build: .
   environment:
     &airflow-common-env
+    HOST_PROJECT_DIR: ${HOST_PROJECT_DIR}
+    DATABRICKS_NOTEBOOK_BASE: ${DATABRICKS_NOTEBOOK_BASE}
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow

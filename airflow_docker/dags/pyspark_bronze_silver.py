@@ -12,10 +12,7 @@ DatabricksSubmitRunOperator,
 
 
 
-# configuration
-NOTEBOOK_BASE = (
-    "/Workspace/Users/halill.eibas@outlook.com/Flood-analytics-pipeline/notebooks"
-)
+from pipeline_config import NOTEBOOK_BASE
 
 
 default_args = {

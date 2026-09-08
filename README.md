@@ -67,7 +67,7 @@ End-to-end pipeline orchestrated via Apache Airflow running in Docker.
 
 - **Bronze layer (3 tasks):** FEMA claims, synthetic policies/customers/agents, reference tables
 - **Silver layer (4 tasks):** Clean FEMA, clean synthetic, enrich claims, synthesize lifecycle dates
-- **Gold layer (2 tasks):** dbt materialize models → dbt test 70+ assertions
+- **Gold layer (4 tasks):** dim_policy SCD2, dim_customer SCD2, dbt materialize models → dbt test 70+ assertions
 
 **Two orchestration patterns united:**
 

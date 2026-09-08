@@ -11,16 +11,13 @@ logger = logging.getLogger(__name__)
 
 # configuration
 
-# databricks notebooks - synched from GitHub via Databricks Git folder
-NOTEBOOK_BASE = (
-    "/Workspace/Users/halill.eibas@outlook.com/Flood-analytics-pipeline/notebooks"
+from pipeline_config import (
+    HOST_DBT_PROFILES,
+    HOST_DBT_PROJECT,
+    NOTEBOOK_BASE,
 )
 
-# dbt config for DockerOperator
 DBT_IMAGE = "dbt-flood-analytics:1.12.2"
-HOST_PROJECT_DIR = "/Users/halil/Desktop/insurance_claim/claims-policy-analytics-pipeline"
-HOST_DBT_PROJECT = f"{HOST_PROJECT_DIR}/dbt/flood_analytics"
-HOST_DBT_PROFILES = f"{HOST_PROJECT_DIR}/home_dbt"
 
 def task_failure_alert(context: dict) -> None:
     """

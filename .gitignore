@@ -265,6 +265,7 @@ dbt/target/
 dbt/dbt_packages/
 dbt/logs/
 dbt/.user.yml
+home_dbt/.user.yml
 profiles.yml
 !dbt/profiles.example.yml
 
