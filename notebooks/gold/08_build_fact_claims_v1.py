@@ -1,3 +1,7 @@
+# SUPERSEDED. Canonical fact_claims is dbt/flood_analytics/models/marts/fact_claims.sql
+# Kept as the PySpark v1 that the dbt port was proven against.
+# Not wired into medallion_full_refresh.
+
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Gold - fact_claims v1
