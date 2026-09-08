@@ -5,12 +5,13 @@ Customers state match the FEMA claim's state (they own the property).
 """
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from uuid import uuid4
+from uuid import NAMESPACE_DNS, uuid4, uuid5
 import random
 import pandas as pd
 from faker import Faker
 
 SEED = 42
+CUSTOMER_NAMESPACE = uuid5(NAMESPACE_DNS, "flood-analytics.customers")
 FEMA_CSV = Path("/Users/halil/Desktop/data/raw/FimaNfipClaimsV2.csv").expanduser()
 OUTPUT_PATH = Path("/Users/halil/Desktop/data/synthetic/customers.parquet").expanduser()
 PIPELINE_RUN_ID = str(uuid4())
@@ -33,7 +34,10 @@ def main():
     
     # Generate one customer per claim. Vectorize what we can.
     n = len(fema)
-    customer_ids = [str(uuid4()) for _ in range(n)]
+    customer_ids = [
+        str(uuid5(CUSTOMER_NAMESPACE, str(fid)))
+        for fid in fema["fema_claim_id"]
+    ]
     first_names = [fake.first_name() for _ in range(n)]
     last_names = [fake.last_name() for _ in range(n)]
     emails = [fake.email() for _ in range(n)]
@@ -73,7 +77,7 @@ def main():
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     customers.to_parquet(OUTPUT_PATH, index=False)
     print(f"Wrote {len(customers):,} customers to {OUTPUT_PATH}")
-    print(f"Customer state distribution (top 5):\n{customers['address_state'].value_counts().head}")
+    print(f"Customer state distribution (top 5):\n{customers['address_state'].value_counts().head()}")
          
 
 if __name__ == "__main__":
