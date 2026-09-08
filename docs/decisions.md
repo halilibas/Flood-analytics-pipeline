@@ -339,3 +339,25 @@ the dbt test suite demonstrates 5 quality thinking patterns:
 
 **Test count:** ~68 total 
 
+
+## 2026-09-07 — Idempotent gold dims and a self-sufficient DAG
+
+The gold PySpark notebooks were not safe to re-run. Three separate problems
+compounded:
+
+1. **Demo blocks mutated real tables.** dim_policy, dim_customer, and dim_agent
+   each ended with a simulated attribute change that was never rolled back.
+   Every full run left a phantom extra version (2,721,781 rows instead of
+   2,721,780) or regenerated agent keys.
+2. **Surrogate keys were non-deterministic.** `monotonically_increasing_id()`
+   is unique only within a single query execution, so a rebuild assigned new
+   keys and every downstream FK silently pointed somewhere else. Replaced with
+   `xxhash64` over the natural key and version.
+3. **dim_customer effective_date drifted daily.** The initial version used
+   `date.today()`, so a rebuild would fail to match any claim whose loss date
+   was earlier than the run. Floored to `1900-01-01` so the first version
+   covers all history.
+
+The DAG also did not build the two SCD2 dims that `fact_claims` reads as
+sources. `gold_build_dim_policy_scd2` and `gold_build_dim_customer_scd2` are
+now tasks between silver and `dbt_run`, taking the DAG from 9 tasks to 11.
