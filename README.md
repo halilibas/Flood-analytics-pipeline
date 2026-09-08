@@ -10,7 +10,7 @@ The goal is to build a small but realistic flood analytics pipeline: ingest raw 
 
 ## Pipeline Overview
 
-End-to-end pipeline: FEMA NFIP raw → Bronze (Delta) → Silver (typed/cleaned) → Gold (dbt marts + PySpark-managed SCD2) → Streamlit dashboard. All layers tested via dbt assertions, orchestrated end-to-end via Airflow.
+End-to-end pipeline: FEMA NFIP raw → Bronze (Delta) → Silver (typed/cleaned) → Gold (dbt marts + PySpark-managed SCD2) → Streamlit dashboard. Gold layer tested via 80 dbt assertions; orchestrated end-to-end via Airflow.
 
 ![Dashboard](docs/dashboard_screenshot.png)
 ![Cycle time distribution](docs/dashboard_screenshot_histogram.png)
@@ -114,7 +114,7 @@ Current stack:
 
 I chose flood because the data has enough real-world complexity to make the project useful: claim amounts, dates, locations, catastrophe events, policy attributes, and historical changes.
 
-The project uses flood claims as the example domain, but the engineering patterns are general: raw ingestion, medallion architecture, dimensional modeling, incremental processing, orchestration, testing, and dashboarding.
+The project uses flood claims as the example domain, but the engineering patterns are general: raw ingestion, medallion architecture, dimensional modeling, orchestration, testing, and dashboarding.
 
 ## Data Sources
 
